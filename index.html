@@ -146,6 +146,18 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
+/* ---- 完了したタスク：各欄の右下に「完了 N件」。押すと開く ---- */
+.done-wrap{margin-top:8px}
+.done-box>summary{display:block;width:max-content;margin-left:auto;list-style:none;cursor:pointer;font-size:13px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:4px 14px;background:var(--surface)}
+.done-box>summary::-webkit-details-marker{display:none}
+.done-box[open]>summary{color:var(--accent);border-color:var(--accent)}
+.done-box .list{margin-top:8px}
+/* チェックしたタスクがすっと消える */
+.item.leaving,.cal-task.leaving{opacity:0;transform:translateX(14px);transition:opacity .2s,transform .2s}
+/* 「元に戻す」付きのお知らせ */
+.toast.has-act{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.toast-act{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:3px 12px;font-weight:700;font-size:14px;white-space:nowrap}
+
 /* ---- 上に固定する帯（更新・設定） ---- */
 .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) clamp(16px,2.5vw,40px) 8px;background:var(--bg);border-bottom:1px solid var(--line)}
 .tb-title{font-weight:900;font-size:17px}
@@ -433,9 +445,26 @@ let state = store.get('board.cache', null);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function toast(msg){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+function toast(msg, opt){
+  const t = $('#toast'); t.textContent = msg;
+  if (opt && opt.label){
+    const b = document.createElement('button');
+    b.className = 'toast-act'; b.textContent = opt.label;
+    b.addEventListener('click', () => { t.classList.remove('show'); clearTimeout(toast._t); opt.fn(); });
+    t.appendChild(b);
+  }
+  t.classList.toggle('has-act', !!(opt && opt.label));
+  t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), (opt && opt.ms) || 2200);
+}
+const nowStr = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
+// 完了にした直後だけ、しばらく「元に戻す」を出す
+function showUndo(id, prev){
+  toast('完了にしました', {label:'元に戻す', ms:7000, fn: () => {
+    const st = prev && prev !== '済' ? prev : '未';
+    act(() => { allTasks().filter(x => x.ID === id).forEach(x => { x['状態'] = st; x['完了日時'] = ''; }); },
+      () => api('status', {id, status: st}), '元に戻しました');
+  }});
 }
 
 /* ---------- 通信 ---------- */
@@ -484,7 +513,10 @@ function renderMain(err){
   const strip = tasks.length
     ? tasks.map(t => `<span class="${t['状態']==='済'?'done':''}" style="--c:var(${bizVar(t['事業'])})"></span>`).join('')
     : '<span></span>';
-  const waiting = state.waiting || [];
+  const openT = tasks.filter(t => t['状態'] !== '済');
+  const waiting = (state.waiting || []).filter(t => t['状態'] !== '済');
+  const somedayOpen = (state.someday || []).filter(t => t['状態'] !== '済');
+  const somedayDone = doneBox('someday');
   const cands = state.candidates || [];
 
   app.innerHTML = `
@@ -506,10 +538,11 @@ function renderMain(err){
         <div class="list">${state.carry.map(carryItem).join('')}</div>
       </section>` : ''}
       <section>
-        <h2>今日やること <span class="n">${tasks.length}件</span></h2>
+        <h2>今日やること <span class="n">${openT.length}件</span></h2>
         ${eventsHtml(state.today)}
-        ${tasks.length ? `<div class="list">${tasks.map(t => taskItem(t)).join('')}</div>`
-          : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
+        ${openT.length ? `<div class="list">${openT.map(t => taskItem(t)).join('')}</div>`
+          : `<p class="empty-note">${tasks.length ? '今日のタスクは全部終わりました。' : '今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。'}</p>`}
+        ${doneBox('today')}
       </section>
       ${waiting.length ? `
       <section>
@@ -521,10 +554,11 @@ function renderMain(err){
     <div class="a-mid">${goalsHtml()}</div>
     <div class="a-right">
       ${decisionsHtml()}
-      ${state.someday && state.someday.length ? `
+      ${somedayOpen.length || somedayDone ? `
       <section>
-        <h2>日付なし <span class="n">${state.someday.length}件</span></h2>
-        <div class="list">${state.someday.map(t => taskItem(t)).join('')}</div>
+        <h2>日付なし <span class="n">${somedayOpen.length}件</span></h2>
+        ${somedayOpen.length ? `<div class="list">${somedayOpen.map(t => taskItem(t)).join('')}</div>` : ''}
+        ${somedayDone}
       </section>` : ''}
       ${cands.length ? `
       <section>
@@ -617,8 +651,38 @@ function calTask(t){
     <button class="tap cal-title" data-act="edit" data-id="${esc(t.ID)}">${esc(short(t['内容']))}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
   </div>`;
 }
+// 完了したタスク（各欄の右下の「完了 N件」）
+const doneOpen = {};
+function doneList(kind){
+  const t0 = state.today, in7 = addDays(t0, 7);
+  const day = t => String(t['完了日時'] || '').slice(0, 10);
+  const seen = new Set(), out = [];
+  allTasks().forEach(t => {
+    if (t['状態'] !== '済' || seen.has(t.ID)) return;
+    const d = t['日付'] || '';
+    const ok = kind === 'today' ? (d === t0 || day(t) === t0)
+      : kind === 'upcoming' ? (d > t0 && d <= in7)
+      : kind === 'someday' ? (!d && day(t) !== '' && day(t) >= addDays(t0, -14))
+      : false;
+    if (ok){ seen.add(t.ID); out.push(t); }
+  });
+  return out.sort((a, b) => String(b['完了日時'] || '') < String(a['完了日時'] || '') ? -1 : 1);
+}
+function doneBox(kind){
+  const list = doneList(kind);
+  if (!list.length) return '';
+  return `<div class="done-wrap"><details class="done-box" data-kind="${kind}" ${doneOpen[kind] ? 'open' : ''}>
+    <summary>完了 ${list.length}件</summary>
+    <div class="list">${list.map(t => taskItem(t, {showDate: kind !== 'today'})).join('')}</div>
+  </details></div>`;
+}
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.classList && d.classList.contains('done-box')) doneOpen[d.dataset.kind] = d.open;
+}, true);
+
 function upcomingHtml(){
-  const ups = state.upcoming || [];
+  const ups = (state.upcoming || []).filter(t => t['状態'] !== '済');
   const days = Array.from({length: 7}, (_, i) => addDays(state.today, i + 1));
   const has = d => ups.some(t => t['日付'] === d) || eventsOn(d).length > 0;
   const sel = calSel && days.includes(calSel) ? calSel : (days.find(has) || days[0]);
@@ -646,6 +710,7 @@ function upcomingHtml(){
       ${dts.length ? `<div class="list">${dts.map(t => taskItem(t)).join('')}</div>`
         : (eventsOn(sel).length ? '' : '<p class="empty-note">この日の予定・タスクはありません。</p>')}
     </div>
+    ${doneBox('upcoming')}
   </section>`;
 }
 
@@ -717,7 +782,7 @@ function decisionsHtml(){
 const projBiz = id => ((state.projects || []).find(p => p.ID === id) || {})['事業'];
 
 /* ---------- 操作 ---------- */
-const allTasks = () => [...state.tasks, ...state.carry, ...(state.upcoming||[]), ...(state.waiting||[]), ...(state.someday||[]), ...(state.projTasks||[]), ...(state.calTasks||[])];
+const allTasks = () => [...state.tasks, ...state.carry, ...(state.upcoming||[]), ...(state.waiting||[]), ...(state.someday||[]), ...(state.projTasks||[]), ...(state.calTasks||[]), ...(state.recentDone||[])];
 const findTask = id => allTasks().find(t => t.ID === id) || (state.calTasks || []).find(t => t.ID === id);
 
 async function act(fnLocal, call, okMsg){
@@ -740,8 +805,14 @@ document.addEventListener('click', e => {
   switch (b.dataset.act){
     case 'toggle': {
       const t = findTask(id); if (!t) return;
-      const next = t['状態'] === '済' ? '未' : '済';
-      act(() => { allTasks().filter(x => x.ID === id).forEach(x => { x['状態'] = next; }); }, () => api('status', {id, status: next}));
+      const prev = t['状態'], completing = prev !== '済', next = completing ? '済' : '未';
+      const run = () => act(() => { allTasks().filter(x => x.ID === id).forEach(x => { x['状態'] = next; x['完了日時'] = completing ? nowStr() : ''; }); },
+        () => api('status', {id, status: next}));
+      const el = b.closest('.item, .cal-task');
+      // 完了にしたものは、すっと消えてから一覧を組み直す。しばらく「元に戻す」を出す
+      if (completing && el && !el.closest('dialog')){ el.classList.add('leaving'); setTimeout(run, 210); }
+      else run();
+      if (completing) showUndo(id, prev);
       break;
     }
     case 'keep': {
@@ -1141,6 +1212,7 @@ function demoApi(action, p){
         events: demo.events,
         works: demo.works,
         calTasks: T.filter(t => t['日付'] && t['状態'] !== '捨'),
+        recentDone: T.filter(t => t['状態'] === '済').map(t => ({...t, '完了日時': t['完了日時'] || (today + ' 09:30')})),
         fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)
       }));
     }
