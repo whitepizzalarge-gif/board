@@ -431,7 +431,7 @@ $('#addDlg').addEventListener('close', async () => {
   const text = String(fd.get('text') || '').trim(); const biz = fd.get('biz');
   if (!text) return;
   const tmp = {ID:'tmp'+Date.now(), '日付':state.today, '内容':text, '事業':biz, '状態':'未', 'メモ':''};
-  act(() => { state.tasks.push(tmp); }, async () => { const r = await api('add', {text, biz}); tmp.ID = r.id; }, '追加しました');
+  act(() => { state.tasks.push(tmp); }, async () => { const r = await api('add', {text, biz}); tmp.ID = r.id; render(); }, '追加しました');
 });
 
 /* 設定 */
