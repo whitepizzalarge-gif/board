@@ -772,7 +772,7 @@ async function openRecur(){
   $('#setDlg').close();
   $('#recBody').innerHTML = '<p class="empty-note">読み込んでいます…</p>';
   $('#recDlg').showModal();
-  try { recRows = await api('recur'); $('#recBody').innerHTML = recHtml(); }
+  try { recRows = (await api('recur')).filter(r => r.ID && r['名前']); $('#recBody').innerHTML = recHtml(); }
   catch(e){ $('#recBody').innerHTML = errBox(e); }
 }
 $('#btnRecur').addEventListener('click', openRecur);
