@@ -30,12 +30,12 @@
   }
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overscroll-behavior-y:contain}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
   font-size:16px; line-height:1.55; font-feature-settings:"palt";
-  padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom));
+  padding:0 0 calc(96px + env(safe-area-inset-bottom));
   -webkit-tap-highlight-color:transparent;
 }
 button,input,select,textarea{font:inherit;color:inherit}
@@ -146,6 +146,44 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
+/* ---- 上に固定する帯（更新・設定） ---- */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) clamp(16px,2.5vw,40px) 8px;background:var(--bg);border-bottom:1px solid var(--line)}
+.tb-title{font-weight:900;font-size:17px}
+.tb-stamp{font-size:12.5px;color:var(--sub);flex:1}
+.tb-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.tb-btn svg{width:16px;height:16px}
+.tb-btn.spin svg{animation:spin .8s linear infinite}
+.tb-btn.plain{border-color:transparent;background:transparent;color:var(--accent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translate(-50%,-16px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 14px;border-radius:999px;z-index:40;transition:opacity .15s}
+.ptr.ready{background:var(--accent);color:#fff}
+
+/* ---- 月カレンダー（全部の月を前後に送って見る） ---- */
+#monthDlg{max-width:1100px}
+.m-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.m-head h3{margin:0;flex:1;text-align:center;font-size:17px;min-width:120px}
+.m-wd{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;font-size:12px;color:var(--sub);text-align:center;margin-bottom:4px}
+.m-wd .sun{color:var(--danger)}.m-wd .sat{color:var(--b-giga)}
+.m-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.m-cell{background:var(--bg);border-radius:10px;padding:5px 4px;min-height:58px;border:2px solid transparent;cursor:pointer;overflow:hidden;min-width:0}
+.m-cell.dim{opacity:.45}
+.m-cell.sel{border-color:var(--accent)}
+.m-d{font-size:13px;font-weight:700;display:inline-block;min-width:22px;text-align:center;border-radius:999px}
+.m-cell.sun .m-d{color:var(--danger)}.m-cell.sat .m-d{color:var(--b-giga)}
+.m-cell.today .m-d{background:var(--accent);color:#fff}
+.m-full{display:none}
+.m-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.m-t{font-size:11px;line-height:1.3;padding:1px 4px;margin-top:2px;border-left:3px solid var(--c);background:var(--surface);border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-t.is-done{color:var(--sub);text-decoration:line-through}
+.m-ev{font-size:10.5px;line-height:1.3;padding:1px 4px;margin-top:2px;color:var(--sub);border-left:3px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-more{font-size:10.5px;color:var(--sub);margin-top:2px}
+#mDetail{margin-top:14px}
+@media (min-width:700px){
+  .m-full{display:block}
+  .m-dots{display:none}
+  .m-cell{min-height:104px;padding:6px}
+}
+
 /* ---- 画面全体の並べ方：狭いと1列、広いと2〜3列 ---- */
 #app{display:block}
 .a-works{grid-area:works}.a-head{grid-area:head}.a-left{grid-area:left}.a-cal{grid-area:cal}
@@ -178,8 +216,8 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .cal-chk{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--c);background:transparent;padding:0;margin-top:1px}
 .cal-task.is-done .cal-chk{background:var(--c)}
 .cal-task.is-done .cal-title{color:var(--sub);text-decoration:line-through}
-.cal-title{font-size:13px;line-height:1.35;word-break:break-word;flex:1;min-width:0}
-.cal-ev{font-size:12.5px;color:var(--sub);padding:4px 6px;border-left:3px solid var(--line);margin-top:4px;line-height:1.35;word-break:break-word}
+.cal-title{font-size:11.5px;line-height:1.35;word-break:break-word;flex:1;min-width:0}
+.cal-ev{font-size:11.5px;color:var(--sub);padding:4px 6px;border-left:3px solid var(--line);margin-top:4px;line-height:1.35;word-break:break-word}
 .cal-ev span{margin-right:5px;font-variant-numeric:tabular-nums}
 @media (min-width:700px){
   .cell-dots{display:none}
@@ -250,6 +288,15 @@ dialog{max-height:92vh;overflow:auto}
 </style>
 </head>
 <body>
+<div class="topbar" id="topbar">
+  <span class="tb-title">ボード</span>
+  <span class="tb-stamp" id="stamp"></span>
+  <button class="tb-btn" id="btnRefresh" data-act="reload" aria-label="サイトを更新する">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>更新
+  </button>
+  <button class="tb-btn plain" data-act="settings">設定</button>
+</div>
+<div class="ptr" id="ptr">↓ 引いて更新</div>
 <main class="wrap" id="app" aria-live="polite"></main>
 
 <button class="fab" id="fab" aria-label="タスクを追加">＋</button>
@@ -278,6 +325,22 @@ dialog{max-height:92vh;overflow:auto}
       <button class="btn pri" value="ok">保存する</button>
     </div>
   </form>
+</dialog>
+
+<!-- 月カレンダー：全部の月のタスクと予定を簡易表示 -->
+<dialog id="monthDlg">
+  <div class="sheet">
+    <div class="m-head">
+      <button class="btn-s" id="mPrev" aria-label="前の月">‹ 前の月</button>
+      <h3 id="mTitle"></h3>
+      <button class="btn-s" id="mNext" aria-label="次の月">次の月 ›</button>
+      <button class="btn-s keep" id="mToday">今日</button>
+      <button class="btn-s" id="mClose">閉じる</button>
+    </div>
+    <div class="m-wd"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
+    <div class="m-grid" id="mGrid"></div>
+    <div id="mDetail"></div>
+  </div>
 </dialog>
 
 <!-- 事業の中身：この事業で動いているプロジェクト -->
@@ -351,6 +414,14 @@ const WD = ['日','月','火','水','木','金','土'];
 const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
 const md = ymd => { const d = new Date(ymd + 'T00:00:00Z'); return `${d.getUTCMonth()+1}/${d.getUTCDate()}（${WD[d.getUTCDay()]}）`; };
 const mdShort = ymd => String(ymd).slice(5).replace('-','/');
+// 内容をひとことに縮める（カッコの中と、最初の読点までで切って、長ければ省略）
+function short(text, n = 13){
+  let t = String(text || '').replace(/[（(][^）)]*[）)]/g, '').replace(/\s+/g, ' ').trim();
+  const head = t.split(/[、。，,]/)[0].trim();
+  if (head) t = head;
+  if (!t) t = String(text || '');
+  return t.length > n ? t.slice(0, n) + '…' : t;
+}
 
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -383,7 +454,6 @@ async function load(){
     state = await api('data');
     store.set('board.cache', state);
     render();
-    if ($('#bizView').open) fillBiz();
   } catch(e){
     render(e);
   }
@@ -391,6 +461,12 @@ async function load(){
 
 /* ---------- 描画 ---------- */
 function render(err){
+  renderMain(err);
+  $('#stamp').textContent = state && state.fetchedAt ? String(state.fetchedAt).slice(11) + ' 時点' : '';
+  if ($('#bizView').open) fillBiz();
+  if ($('#monthDlg').open) fillMonth();
+}
+function renderMain(err){
   const app = $('#app');
   if (!cfg.url){
     app.innerHTML = `<div class="today"><div class="date">ボード</div></div>
@@ -460,7 +536,7 @@ function render(err){
     </div>
     <div class="foot a-foot">
       <span>${esc(state.fetchedAt)} 時点</span>
-      <span><button class="link" data-act="reload">更新</button>　<button class="link" data-act="settings">設定</button></span>
+      <span></span>
     </div>`;
 }
 
@@ -538,7 +614,7 @@ function calTask(t){
   const done = t['状態'] === '済', wait = t['状態'] === '待ち' || t['状態'] === '保留';
   return `<div class="cal-task ${done?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
     <button class="cal-chk" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${done?'未完了に戻す':'完了にする'}：${esc(t['内容'])}"></button>
-    <button class="tap cal-title" data-act="edit" data-id="${esc(t.ID)}">${esc(t['内容'])}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
+    <button class="tap cal-title" data-act="edit" data-id="${esc(t.ID)}">${esc(short(t['内容']))}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
   </div>`;
 }
 function upcomingHtml(){
@@ -562,7 +638,7 @@ function upcomingHtml(){
   }).join('');
   const dts = ups.filter(t => t['日付'] === sel);
   return `<section id="cal">
-    <h2>これから <span class="n">7日間・タスク${ups.length}件</span></h2>
+    <h2>これから <span class="n">7日間・タスク${ups.length}件</span><button class="link h-act" data-act="month">月カレンダー</button></h2>
     <div class="cal">${cells}</div>
     <div class="cal-detail">
       <div class="day-head">${esc(md(sel))}</div>
@@ -641,8 +717,8 @@ function decisionsHtml(){
 const projBiz = id => ((state.projects || []).find(p => p.ID === id) || {})['事業'];
 
 /* ---------- 操作 ---------- */
-const allTasks = () => [...state.tasks, ...state.carry, ...(state.upcoming||[]), ...(state.waiting||[]), ...(state.someday||[]), ...(state.projTasks||[])];
-const findTask = id => allTasks().find(t => t.ID === id);
+const allTasks = () => [...state.tasks, ...state.carry, ...(state.upcoming||[]), ...(state.waiting||[]), ...(state.someday||[]), ...(state.projTasks||[]), ...(state.calTasks||[])];
+const findTask = id => allTasks().find(t => t.ID === id) || (state.calTasks || []).find(t => t.ID === id);
 
 async function act(fnLocal, call, okMsg){
   const backup = JSON.parse(JSON.stringify(state));
@@ -695,7 +771,10 @@ document.addEventListener('click', e => {
         () => api('cand', {rowId:id}), '不要にしました');
       break;
     }
-    case 'reload': load(); toast('更新しています'); break;
+    case 'reload': refreshSite(); break;
+    case 'month': openMonth(); break;
+    case 'mday': mSel = b.dataset.day; fillMonth(); break;
+    case 'madd': openTask({mode:'add', task:{'日付': b.dataset.day}}); break;
     case 'settings': openSettings(); break;
   }
 });
@@ -783,6 +862,98 @@ onDialog('#taskDlg', rv => {
     save(() => api('add', {fields, inboxId: ctx.inboxId || ''}), '追加しました');
   }
 });
+
+/* ---------- サイトの更新（ボタン・引き下げ） ---------- */
+function refreshSite(){
+  $('#btnRefresh').classList.add('spin');
+  toast('更新しています');
+  setTimeout(() => location.reload(), 150);
+}
+// スマホ：いちばん上で下に引くと更新
+(function(){
+  const ind = $('#ptr'); let y0 = 0, dy = 0, on = false;
+  const reset = () => { on = false; dy = 0; ind.style.opacity = 0; ind.classList.remove('ready'); ind.textContent = '↓ 引いて更新'; };
+  addEventListener('touchstart', e => {
+    if (window.scrollY > 0 || document.querySelector('dialog[open]') || e.touches.length !== 1) return;
+    on = true; y0 = e.touches[0].clientY; dy = 0;
+  }, {passive:true});
+  addEventListener('touchmove', e => {
+    if (!on) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0 || window.scrollY > 0){ ind.style.opacity = 0; return; }
+    ind.style.opacity = Math.min(dy / 60, 1);
+    const ready = dy > 70;
+    ind.classList.toggle('ready', ready);
+    ind.textContent = ready ? '離して更新' : '↓ 引いて更新';
+  }, {passive:true});
+  addEventListener('touchend', () => { const go = on && dy > 70; reset(); if (go) refreshSite(); });
+  addEventListener('touchcancel', reset);
+})();
+
+/* ---------- 月カレンダー（前後の月へ送って、全部の月のタスクと予定を簡易表示） ---------- */
+let mYM = '', mSel = '';
+const evCache = {};
+const ymOf = ymd => String(ymd).slice(0, 7);
+function openMonth(){
+  mYM = ymOf(state.today); mSel = state.today;
+  fillMonth();
+  $('#monthDlg').showModal();
+}
+function shiftMonth(n){
+  const d = new Date(mYM + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n);
+  mYM = d.toISOString().slice(0, 7); mSel = ''; fillMonth();
+}
+function evListHtml(evs){
+  if (!evs.length) return '';
+  return `<div class="list ev-list">${evs.map(e => `<div class="item ev">
+    <div class="ev-time">${e.start ? esc(e.start) : '終日'}</div>
+    <div class="body"><div class="title">${esc(e.title)}</div>${e.start && e.end ? `<div class="meta">〜${esc(e.end)}</div>` : ''}</div>
+  </div>`).join('')}</div>`;
+}
+function fillMonth(){
+  const first = mYM + '-01';
+  const start = addDays(first, -new Date(first + 'T00:00:00Z').getUTCDay());
+  const end = addDays(start, 42);
+  const key = start + '_' + end;
+  if (!evCache[key]){
+    evCache[key] = 'loading';
+    const done = r => { evCache[key] = r; if ($('#monthDlg').open) fillMonth(); };
+    api('events', {from:start, to:end}).then(done).catch(() => done([]));
+  }
+  const evs = Array.isArray(evCache[key]) ? evCache[key] : [];
+  const byDay = {};
+  (state.calTasks || []).forEach(t => { (byDay[t['日付']] = byDay[t['日付']] || []).push(t); });
+  const sortT = a => a.slice().sort((x, y) => (x['状態']==='済') - (y['状態']==='済') || bizOrder(x['事業']) - bizOrder(y['事業']));
+  const cells = [];
+  for (let i = 0; i < 42; i++){
+    const day = addDays(start, i), wd = i % 7;
+    const ts = sortT(byDay[day] || []), es = evs.filter(e => e.date === day);
+    const dots = es.map(() => '<i class="dot ev"></i>').join('')
+      + ts.slice(0, 8).map(t => `<i class="dot" style="--c:var(${bizVar(t['事業'])})"></i>`).join('');
+    cells.push(`<div class="m-cell ${ymOf(day) !== mYM ? 'dim' : ''} ${day === state.today ? 'today' : ''} ${day === mSel ? 'sel' : ''} ${wd === 0 ? 'sun' : wd === 6 ? 'sat' : ''}" data-act="mday" data-day="${day}">
+      <div class="m-d">${+day.slice(8)}</div>
+      <div class="m-full">
+        ${es.slice(0, 2).map(e => `<div class="m-ev">${esc(e.title)}</div>`).join('')}
+        ${ts.slice(0, 3).map(t => `<div class="m-t ${t['状態']==='済' ? 'is-done' : ''}" style="--c:var(${bizVar(t['事業'])})">${esc(short(t['内容'], 10))}</div>`).join('')}
+        ${ts.length > 3 ? `<div class="m-more">ほか${ts.length - 3}件</div>` : ''}
+      </div>
+      <div class="m-dots">${dots}</div>
+    </div>`);
+  }
+  $('#mTitle').textContent = `${mYM.slice(0, 4)}年${+mYM.slice(5)}月`;
+  $('#mGrid').innerHTML = cells.join('');
+  const dts = mSel ? sortT(byDay[mSel] || []) : [], des = mSel ? evs.filter(e => e.date === mSel) : [];
+  $('#mDetail').innerHTML = mSel ? `
+    <div class="day-head">${esc(md(mSel))}</div>
+    ${evListHtml(des)}
+    ${dts.length ? `<div class="list">${dts.map(t => taskItem(t)).join('')}</div>`
+      : (des.length ? '' : '<p class="empty-note">この日のタスクと予定はありません。</p>')}
+    <div class="row-btns" style="margin-top:10px"><button class="btn sec" data-act="madd" data-day="${mSel}">＋ この日にタスクを足す</button></div>` : '';
+}
+$('#mPrev').addEventListener('click', () => shiftMonth(-1));
+$('#mNext').addEventListener('click', () => shiftMonth(1));
+$('#mToday').addEventListener('click', () => { mYM = ymOf(state.today); mSel = state.today; fillMonth(); });
+$('#mClose').addEventListener('click', () => $('#monthDlg').close());
 
 /* 事業の中身（この事業で動いているプロジェクト） */
 let projCtx = null, curBiz = '';
@@ -969,6 +1140,7 @@ function demoApi(action, p){
         candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
         events: demo.events,
         works: demo.works,
+        calTasks: T.filter(t => t['日付'] && t['状態'] !== '捨'),
         fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)
       }));
     }
@@ -984,6 +1156,7 @@ function demoApi(action, p){
     if (action === 'padd'){ const id = 'P' + Date.now(); demo.projects.push({ID:id, ...p.fields}); return {id}; }
     if (action === 'pupdate'){ Object.assign(demo.projects.find(x => x.ID === p.id), p.fields); return {}; }
     if (action === 'recur') return JSON.parse(JSON.stringify(demo.recur));
+    if (action === 'events') return JSON.parse(JSON.stringify(demo.events.filter(e => e.date >= p.from && e.date < p.to)));
     if (action === 'rupdate'){ Object.assign(demo.recur.find(x => x.ID === p.id), p.fields); return {}; }
     if (action === 'cand'){ const c = demo.inbox.find(x => x['行ID'] === p.rowId); if (c) c['仕分け先'] = '候補（不要）'; return {}; }
   });
