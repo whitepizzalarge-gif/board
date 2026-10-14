@@ -146,6 +146,21 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
+.item.ev{padding:10px 14px 10px 0}
+.item.ev::before{background:var(--line)}
+.ev-time{flex:none;width:44px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;padding-top:1px}
+.ev .title{font-size:14.5px}
+.ev-list{margin-bottom:6px}
+.rec{padding:12px 0;border-top:1px solid var(--line)}
+.rec:first-child{border-top:0}
+.rec .rec-h{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rec .rec-h b{font-size:15px}
+.rec .rec-h .chk{margin-bottom:0}
+.rec .meta{margin:2px 0 8px}
+.rec .field{margin-bottom:8px}
+.rec .row-btns{justify-content:flex-start}
+#recBody{max-height:60vh;overflow:auto}
+
 button.tap{background:none;border:0;padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer;width:100%}
 .item .body.tap{flex:1;min-width:0}
 button.item.proj{width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;font:inherit;color:inherit}
@@ -237,6 +252,16 @@ dialog{max-height:92vh;overflow:auto}
   </form>
 </dialog>
 
+<!-- 定期タスク（設定の中） -->
+<dialog id="recDlg">
+  <div class="sheet">
+    <h3>定期タスク</h3>
+    <p class="hint">毎日5時に、開始日が7日以内に来る回のタスクを作ります。名前・周期・日付はスプシの「定期」タブで直します。</p>
+    <div id="recBody"></div>
+    <div class="row-btns"><button class="btn sec" id="recClose">閉じる</button></div>
+  </div>
+</dialog>
+
 <dialog id="setDlg">
   <form class="sheet" method="dialog" id="setForm">
     <h3>接続の設定</h3>
@@ -244,6 +269,7 @@ dialog{max-height:92vh;overflow:auto}
     <label class="field"><span>ウェブアプリURL</span><input name="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <label class="field"><span>合言葉</span><input name="key" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <div class="row-btns">
+      <button class="btn sec left" type="button" id="btnRecur">定期タスク</button>
       <button class="btn sec" value="cancel" formnovalidate>やめる</button>
       <button class="btn pri" value="ok">保存する</button>
     </div>
@@ -342,6 +368,7 @@ function render(err){
     </section>` : ''}
     <section>
       <h2>今日やること <span class="n">${tasks.length}件</span></h2>
+      ${eventsHtml(state.today)}
       ${tasks.length ? `<div class="list">${tasks.map(t => taskItem(t)).join('')}</div>`
         : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
     </section>
@@ -428,16 +455,33 @@ function candItem(c){
   </div>`;
 }
 
-// 明日〜7日後を日付ごとに
+// カレンダーの予定（チェック丸なし。終日は時刻の代わりに「終日」）
+const eventsOn = day => (state.events || []).filter(e => e.date === day)
+  .sort((a,b) => (a.start || '') < (b.start || '') ? -1 : 1);
+function eventsHtml(day){
+  const evs = eventsOn(day);
+  if (!evs.length) return '';
+  return `<div class="list ev-list">${evs.map(e => `<div class="item ev">
+    <div class="ev-time">${e.start ? esc(e.start) : '終日'}</div>
+    <div class="body"><div class="title">${esc(e.title)}</div>${e.start && e.end ? `<div class="meta">〜${esc(e.end)}</div>` : ''}</div>
+  </div>`).join('')}</div>`;
+}
+
+// 明日〜7日後を日付ごとに（タスクと予定を同じ日付の下に）
 function upcomingHtml(){
   const ups = state.upcoming || [];
-  if (!ups.length) return '';
-  const days = [...new Set(ups.map(t => t['日付']))].sort();
+  const last = addDays(state.today, 7);
+  const evDays = (state.events || []).map(e => e.date).filter(d => d > state.today && d <= last);
+  const days = [...new Set([...ups.map(t => t['日付']), ...evDays])].sort();
+  if (!days.length) return '';
   return `<section>
-    <h2>これから <span class="n">7日間・${ups.length}件</span></h2>
-    ${days.map(day => `
-      <div class="day-head">${esc(md(day))}</div>
-      <div class="list">${ups.filter(t => t['日付'] === day).map(t => taskItem(t)).join('')}</div>`).join('')}
+    <h2>これから <span class="n">7日間・タスク${ups.length}件</span></h2>
+    ${days.map(day => {
+      const ts = ups.filter(t => t['日付'] === day);
+      return `<div class="day-head">${esc(md(day))}</div>
+      ${eventsHtml(day)}
+      ${ts.length ? `<div class="list">${ts.map(t => taskItem(t)).join('')}</div>` : ''}`;
+    }).join('')}
   </section>`;
 }
 
@@ -705,6 +749,46 @@ $('#fab').addEventListener('click', () => {
   openTask({mode:'add', task:{'日付': state.today}});
 });
 
+/* 定期タスク */
+let recRows = [];
+function recHtml(){
+  if (!recRows.length) return '<p class="empty-note">定期タスクはまだありません。スプシの「定期」タブに行を足します。</p>';
+  return recRows.map(r => {
+    const on = String(r['有効']).toUpperCase() === 'TRUE';
+    const when = r['周期'] === '直売日前日' ? '直売日（カレンダーの「直売事務所」）の前日'
+      : `${r['周期']}　開始 ${r['開始日'] || '—'}${r['期限日'] && r['期限日'] !== r['開始日'] ? '／期限 ' + r['期限日'] : ''}`;
+    return `<form class="rec" data-id="${esc(r.ID)}" style="--c:var(${bizVar(r['事業'])})">
+      <div class="rec-h"><b>${esc(r['名前'])}</b><label class="chk"><input type="checkbox" name="有効" ${on ? 'checked' : ''}> 有効</label></div>
+      <div class="meta"><span class="biz">${esc(r['事業'] || '事業未設定')}</span>　${esc(when)}</div>
+      <div class="field-row">
+        <label class="field narrow"><span>見込み分</span><input type="number" name="見込み分" min="0" step="5" value="${esc(r['見込み分'])}"></label>
+      </div>
+      <label class="field"><span>手順（1行に1つ）</span><textarea name="手順" class="short">${esc(r['手順'])}</textarea></label>
+      <div class="row-btns"><button class="btn sec" type="submit">この行を保存</button></div>
+    </form>`;
+  }).join('');
+}
+async function openRecur(){
+  $('#setDlg').close();
+  $('#recBody').innerHTML = '<p class="empty-note">読み込んでいます…</p>';
+  $('#recDlg').showModal();
+  try { recRows = await api('recur'); $('#recBody').innerHTML = recHtml(); }
+  catch(e){ $('#recBody').innerHTML = errBox(e); }
+}
+$('#btnRecur').addEventListener('click', openRecur);
+$('#recClose').addEventListener('click', () => $('#recDlg').close());
+$('#recBody').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, id = f.dataset.id, r = recRows.find(x => x.ID === id); if (!r) return;
+  const fields = {'有効': f['有効'].checked ? 'TRUE' : 'FALSE', '見込み分': f['見込み分'].value, '手順': f['手順'].value.trim()};
+  const diff = {};
+  Object.keys(fields).forEach(k => { if (String(r[k] ?? '').toUpperCase() !== String(fields[k]).toUpperCase()) diff[k] = fields[k]; });
+  if (!Object.keys(diff).length){ toast('変更はありません'); return; }
+  toast('保存しています');
+  try { await api('rupdate', {id, fields:diff}); Object.assign(r, fields); toast('保存しました'); }
+  catch(err){ toast('保存できませんでした：' + (err.message || err)); }
+});
+
 /* 設定 */
 function openSettings(){
   const f = $('#setForm'); f.url.value = cfg.url || ''; f.key.value = cfg.key || '';
@@ -739,6 +823,15 @@ function demoApi(action, p){
       {ID:'T9','日付':day(1),'内容':'契約書の返送','事業':'ギガネット（通信）','状態':'待ち','メモ':'先方の確認待ち','期限':day(4)},
       {ID:'T10','日付':'','内容':'経費精算','事業':'エルダイブ','状態':'保留','メモ':'月末にまとめる'},
     ],
+    events:[
+      {date:today, start:'10:00', end:'18:00', title:'事務所'},
+      {date:day(2), start:'', end:'', title:'直売事務所'},
+      {date:day(4), start:'09:30', end:'17:00', title:'イベント会場'},
+    ],
+    recur:[
+      {ID:'R1','名前':'スタッフ交通費回収','事業':'エルダイブ','周期':'毎月','開始日':'1','期限日':'1','見込み分':'30','手順':'','有効':'TRUE','メモ':''},
+      {ID:'R2','名前':'直売前の印刷業務','事業':'円山製麺','周期':'直売日前日','開始日':'','期限日':'','見込み分':'','手順':'賞味期限ラベル確認・印刷\nちらし印刷','有効':'TRUE','メモ':''},
+    ],
     inbox:[{'行ID':'L1','日時':today+' 09:00','原文':'[Todoist] チラシを作るか検討','仕分け先':'候補（未確認）'}],
     projects:[
       {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':day(12)},
@@ -769,6 +862,7 @@ function demoApi(action, p){
         projects: demo.projects.filter(x => x['状態'] !== '完了'),
         goals: demo.goals, decisions: demo.decisions,
         candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
+        events: demo.events,
         fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)
       }));
     }
@@ -783,6 +877,8 @@ function demoApi(action, p){
     if (action === 'update'){ Object.assign(find(p.id), p.fields); return {}; }
     if (action === 'padd'){ const id = 'P' + Date.now(); demo.projects.push({ID:id, ...p.fields}); return {id}; }
     if (action === 'pupdate'){ Object.assign(demo.projects.find(x => x.ID === p.id), p.fields); return {}; }
+    if (action === 'recur') return JSON.parse(JSON.stringify(demo.recur));
+    if (action === 'rupdate'){ Object.assign(demo.recur.find(x => x.ID === p.id), p.fields); return {}; }
     if (action === 'cand'){ const c = demo.inbox.find(x => x['行ID'] === p.rowId); if (c) c['仕分け先'] = '候補（不要）'; return {}; }
   });
 }
