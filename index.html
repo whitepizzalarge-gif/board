@@ -145,23 +145,94 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .hint{font-size:12.5px;color:var(--sub);margin:-4px 0 12px}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
+/* 追加分 */
+button.tap{background:none;border:0;padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer;width:100%}
+.item .body.tap{flex:1;min-width:0}
+button.item.proj{width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;font:inherit;color:inherit}
+.list>button.item:first-child{border-top:0}
+.day-head{font-size:13px;font-weight:700;color:var(--sub);margin:14px 0 6px}
+h2 .h-act{margin-left:auto;font-size:13px;padding:0}
+.chip.wait{border-color:var(--b-maru);color:var(--b-maru)}
+.cands summary{font-size:15px;font-weight:700;color:var(--ink)}
+.cands summary .n{font-weight:500;color:var(--sub);font-size:13px}
+.cand .title{font-size:14px}
+.cand{padding-left:14px}
+.cand::before{display:none}
+.field-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.field-row .field{flex:1;min-width:120px}
+.field-row .field.narrow{flex:0 0 96px;min-width:0}
+.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 10px;font-size:16px}
+.field input:disabled{opacity:.45}
+.field textarea.short{min-height:52px}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:24px;white-space:nowrap}
+.row-btns .left{margin-right:auto}
+dialog{max-height:92vh;overflow:auto}
+.pv-meta{margin:-6px 0 8px}
+.pv-next{margin:0 0 12px;font-size:14px}
+.pv-h{font-size:13px;color:var(--sub);margin:14px 0 6px}
+#pvBody .list{margin-bottom:12px}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <main class="wrap" id="app" aria-live="polite"></main>
 
-<button class="fab" id="fab" aria-label="今日のタスクを追加">＋</button>
+<button class="fab" id="fab" aria-label="タスクを追加">＋</button>
 <div class="toast" id="toast" role="status"></div>
 
-<dialog id="addDlg">
-  <form class="sheet" method="dialog" id="addForm">
-    <h3>今日のタスクを追加</h3>
-    <label class="field"><span>内容</span><textarea name="text" required></textarea></label>
+<!-- タスクの追加・編集（共通） -->
+<dialog id="taskDlg">
+  <form class="sheet" method="dialog" id="taskForm">
+    <h3 id="taskTitle">タスクを追加</h3>
+    <label class="field"><span>内容</span><textarea name="内容" required></textarea></label>
+    <div class="field-row">
+      <label class="field"><span>日付</span><input type="date" name="日付"></label>
+      <label class="chk"><input type="checkbox" name="nodate"> 日付なし</label>
+    </div>
     <div class="bizpick" id="bizPick"></div>
+    <label class="field"><span>プロジェクト</span><select name="プロジェクトID"></select></label>
+    <div class="field-row">
+      <label class="field"><span>状態</span><select name="状態"></select></label>
+      <label class="field"><span>期限</span><input type="date" name="期限"></label>
+      <label class="field narrow"><span>見込み分</span><input type="number" name="見込み分" inputmode="numeric" min="0" step="5"></label>
+    </div>
+    <label class="field"><span>メモ</span><textarea name="メモ" class="short"></textarea></label>
+    <div class="row-btns">
+      <button class="btn sec left" value="tomorrow" id="btnTomorrow" formnovalidate>明日へ</button>
+      <button class="btn sec" value="cancel" formnovalidate>やめる</button>
+      <button class="btn pri" value="ok">保存する</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- プロジェクトの中身 -->
+<dialog id="projView">
+  <div class="sheet">
+    <h3 id="pvTitle"></h3>
+    <div id="pvBody"></div>
+    <div class="row-btns">
+      <button class="btn sec left" id="pvAddTask">タスクを足す</button>
+      <button class="btn sec" id="pvClose">閉じる</button>
+      <button class="btn pri" id="pvEdit">編集</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- プロジェクトの追加・編集 -->
+<dialog id="projDlg">
+  <form class="sheet" method="dialog" id="projForm">
+    <h3 id="projTitle">プロジェクトを追加</h3>
+    <label class="field"><span>名前</span><input name="名前" required autocomplete="off"></label>
+    <div class="bizpick" id="pBizPick"></div>
+    <div class="field-row">
+      <label class="field"><span>状態</span><select name="状態"><option>進行中</option><option>待ち</option><option>完了</option></select></label>
+      <label class="field"><span>期限</span><input type="date" name="期限"></label>
+    </div>
+    <label class="field"><span>次の一手</span><textarea name="次の一手" class="short"></textarea></label>
     <div class="row-btns">
       <button class="btn sec" value="cancel" formnovalidate>やめる</button>
-      <button class="btn pri" value="ok">追加する</button>
+      <button class="btn pri" value="ok">保存する</button>
     </div>
   </form>
 </dialog>
@@ -188,9 +259,14 @@ const BIZ = [
   {name:'ぽとふ', v:'--b-poto'},
   {name:'個人', v:'--b-self'},
 ];
+const TASK_STATUS = ['未','済','待ち','保留','繰越','捨'];
 const bizVar = n => (BIZ.find(b => b.name === n) || {v:'--b-self'}).v;
 const bizOrder = n => { const i = BIZ.findIndex(b => b.name === n); return i < 0 ? 99 : i; };
 const WD = ['日','月','火','水','木','金','土'];
+// yyyy-mm-dd に日数を足す
+const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+const md = ymd => { const d = new Date(ymd + 'T00:00:00Z'); return `${d.getUTCMonth()+1}/${d.getUTCDate()}（${WD[d.getUTCDay()]}）`; };
+const mdShort = ymd => String(ymd).slice(5).replace('-','/');
 
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -247,6 +323,8 @@ function render(err){
   const strip = tasks.length
     ? tasks.map(t => `<span class="${t['状態']==='済'?'done':''}" style="--c:var(${bizVar(t['事業'])})"></span>`).join('')
     : '<span></span>';
+  const waiting = state.waiting || [];
+  const cands = state.candidates || [];
 
   app.innerHTML = `
     <header class="today">
@@ -264,16 +342,29 @@ function render(err){
     </section>` : ''}
     <section>
       <h2>今日やること <span class="n">${tasks.length}件</span></h2>
-      ${tasks.length ? `<div class="list">${tasks.map(taskItem).join('')}</div>`
+      ${tasks.length ? `<div class="list">${tasks.map(t => taskItem(t)).join('')}</div>`
         : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
     </section>
+    ${upcomingHtml()}
+    ${waiting.length ? `
+    <section>
+      <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
+      <div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>
+    </section>` : ''}
     ${projectsHtml()}
     ${goalsHtml()}
     ${decisionsHtml()}
     ${state.someday && state.someday.length ? `
     <section>
       <h2>日付なし <span class="n">${state.someday.length}件</span></h2>
-      <div class="list">${state.someday.map(taskItem).join('')}</div>
+      <div class="list">${state.someday.map(t => taskItem(t)).join('')}</div>
+    </section>` : ''}
+    ${cands.length ? `
+    <section>
+      <details class="more cands">
+        <summary>候補 ${cands.length}件 <span class="n">Claudeが拾った未確認のもの</span></summary>
+        <div class="list">${cands.map(candItem).join('')}</div>
+      </details>
     </section>` : ''}
     <div class="foot">
       <span>${esc(state.fetchedAt)} 時点</span>
@@ -290,30 +381,64 @@ function errBox(e){
   return `<div class="err" role="alert">${esc(msg)}</div>`;
 }
 
-function taskItem(t){
+function taskItem(t, opt = {}){
   const isDone = t['状態'] === '済';
+  const st = t['状態'] === '待ち' || t['状態'] === '保留' ? `<span class="chip wait">${esc(t['状態'])}</span>` : '';
+  const meta = [
+    `<span class="biz">${esc(t['事業'] || '事業未設定')}</span>`,
+    opt.showDate && t['日付'] ? esc(mdShort(t['日付'])) : '',
+    t['期限'] ? `<span class="${t['期限'] < state.today && !isDone ? 'due-over' : ''}">期限 ${esc(mdShort(t['期限']))}</span>` : '',
+    t['見込み分'] ? esc(t['見込み分']) + '分' : '',
+    t['メモ'] ? esc(t['メモ']) : '',
+  ].filter(Boolean).join('　');
   return `<div class="item ${isDone?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
     <button class="check" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${isDone?'未完了に戻す':'完了にする'}：${esc(t['内容'])}">
       <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
     </button>
-    <div class="body">
-      <div class="title">${esc(t['内容'])}</div>
-      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>${t['メモ'] ? '　' + esc(t['メモ']) : ''}</div>
-    </div>
+    <button class="body tap" data-act="edit" data-id="${esc(t.ID)}">
+      <div class="title">${esc(t['内容'])}${st}</div>
+      <div class="meta">${meta}</div>
+    </button>
   </div>`;
 }
 
 function carryItem(t){
   return `<div class="item" style="--c:var(${bizVar(t['事業'])})">
-    <div class="body">
+    <button class="body tap" data-act="edit" data-id="${esc(t.ID)}">
       <div class="title">${esc(t['内容'])}</div>
-      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${esc(String(t['日付']).slice(5).replace('-','/'))}の分</div>
-    </div>
+      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${esc(mdShort(t['日付']))}の分</div>
+    </button>
     <div class="acts">
       <button class="btn-s keep" data-act="keep" data-id="${esc(t.ID)}">今日やる</button>
       <button class="btn-s drop" data-act="drop" data-id="${esc(t.ID)}">やめる</button>
     </div>
   </div>`;
+}
+
+function candItem(c){
+  return `<div class="item cand">
+    <div class="body">
+      <div class="title">${esc(c['原文'])}</div>
+      <div class="meta">${esc(String(c['日時']).slice(5, 10).replace('-','/'))}</div>
+    </div>
+    <div class="acts">
+      <button class="btn-s keep" data-act="cand-take" data-id="${esc(c['行ID'])}">載せる</button>
+      <button class="btn-s drop" data-act="cand-drop" data-id="${esc(c['行ID'])}">不要</button>
+    </div>
+  </div>`;
+}
+
+// 明日〜7日後を日付ごとに
+function upcomingHtml(){
+  const ups = state.upcoming || [];
+  if (!ups.length) return '';
+  const days = [...new Set(ups.map(t => t['日付']))].sort();
+  return `<section>
+    <h2>これから <span class="n">7日間・${ups.length}件</span></h2>
+    ${days.map(day => `
+      <div class="day-head">${esc(md(day))}</div>
+      <div class="list">${ups.filter(t => t['日付'] === day).map(t => taskItem(t)).join('')}</div>`).join('')}
+  </section>`;
 }
 
 function projectsHtml(){
@@ -322,17 +447,19 @@ function projectsHtml(){
     .concat([{b:{name:'事業未設定', v:'--b-self'}, items: ps.filter(p => bizOrder(p['事業']) === 99)}])
     .filter(g => g.items.length);
   const today = state.today;
+  const open = id => (state.projTasks || []).filter(t => t['プロジェクトID'] === id && t['状態'] !== '済').length;
   return `<section>
-    <h2>プロジェクト <span class="n">${ps.length}件</span></h2>
+    <h2>プロジェクト <span class="n">${ps.length}件</span><button class="link h-act" data-act="padd">＋追加</button></h2>
     ${ps.length ? groups.map(g => `
       <div class="biz-head" style="--c:var(${g.b.v})">${esc(g.b.name)}</div>
       <div class="list">${g.items.map(p => {
         const over = p['期限'] && p['期限'] < today;
-        return `<div class="item proj" style="--c:var(${g.b.v})"><div class="body">
-          <div class="title">${esc(p['名前'])}${p['状態']==='待ち' ? '<span class="chip wait">待ち</span>' : ''}</div>
+        const n = open(p.ID);
+        return `<button class="item proj tap" data-act="pview" data-id="${esc(p.ID)}" style="--c:var(${g.b.v})"><div class="body">
+          <div class="title">${esc(p['名前'])}${p['状態']==='待ち' ? '<span class="chip wait">待ち</span>' : ''}${n ? `<span class="chip">${n}件</span>` : ''}</div>
           ${p['次の一手'] ? `<div class="next">${esc(p['次の一手'])}</div>` : ''}
-          ${p['期限'] ? `<div class="meta ${over?'due-over':''}">期限 ${esc(p['期限'].slice(5).replace('-','/'))}${over?'（過ぎています）':''}</div>` : ''}
-        </div></div>`;
+          ${p['期限'] ? `<div class="meta ${over?'due-over':''}">期限 ${esc(mdShort(p['期限']))}${over?'（過ぎています）':''}</div>` : ''}
+        </div></button>`;
       }).join('')}</div>`).join('')
     : `<p class="empty-note">進行中のプロジェクトはありません。</p>`}
   </section>`;
@@ -380,15 +507,21 @@ function decisionsHtml(){
 const projBiz = id => ((state.projects || []).find(p => p.ID === id) || {})['事業'];
 
 /* ---------- 操作 ---------- */
-function findTask(id){
-  return [...state.tasks, ...state.carry, ...(state.someday||[])].find(t => t.ID === id);
-}
+const allTasks = () => [...state.tasks, ...state.carry, ...(state.upcoming||[]), ...(state.waiting||[]), ...(state.someday||[]), ...(state.projTasks||[])];
+const findTask = id => allTasks().find(t => t.ID === id);
 
 async function act(fnLocal, call, okMsg){
   const backup = JSON.parse(JSON.stringify(state));
   fnLocal(); render();
   try { await call(); store.set('board.cache', state); if (okMsg) toast(okMsg); }
   catch(e){ state = backup; render(); toast('保存できませんでした：' + (e.message || e)); }
+}
+
+// 書き込んでから読み直す（編集・追加など、画面の複数の欄にまたがる変更用）
+async function save(call, okMsg){
+  toast('保存しています');
+  try { await call(); toast(okMsg); await load(); }
+  catch(e){ toast('保存できませんでした：' + (e.message || e)); }
 }
 
 document.addEventListener('click', e => {
@@ -398,7 +531,7 @@ document.addEventListener('click', e => {
     case 'toggle': {
       const t = findTask(id); if (!t) return;
       const next = t['状態'] === '済' ? '未' : '済';
-      act(() => { t['状態'] = next; }, () => api('status', {id, status: next}));
+      act(() => { allTasks().filter(x => x.ID === id).forEach(x => { x['状態'] = next; }); }, () => api('status', {id, status: next}));
       break;
     }
     case 'keep': {
@@ -414,24 +547,162 @@ document.addEventListener('click', e => {
         () => api('status', {id, status:'捨'}), 'やめにしました');
       break;
     }
+    case 'edit': { const t = findTask(id); if (t) openTask({mode:'edit', task:t}); break; }
+    case 'pview': openProjView(id); break;
+    case 'padd': openProj(null); break;
+    case 'cand-take': {
+      const c = (state.candidates || []).find(x => x['行ID'] === id); if (!c) return;
+      openTask({mode:'cand', task:{'内容': String(c['原文']).replace(/^\[[^\]]*\]\s*/, ''), '日付': state.today}, inboxId:id});
+      break;
+    }
+    case 'cand-drop': {
+      act(() => { state.candidates = state.candidates.filter(x => x['行ID'] !== id); },
+        () => api('cand', {rowId:id}), '不要にしました');
+      break;
+    }
     case 'reload': load(); toast('更新しています'); break;
     case 'settings': openSettings(); break;
   }
 });
 
-/* 追加 */
-$('#bizPick').innerHTML = BIZ.map((b,i) => `<label style="--c:var(${b.v})"><input type="radio" name="biz" value="${esc(b.name)}" ${i===0?'checked':''}><span>${esc(b.name)}</span></label>`).join('');
+/* タスクの追加・編集ダイアログ */
+const bizRadios = (name) => BIZ.map(b => `<label style="--c:var(${b.v})"><input type="radio" name="${name}" value="${esc(b.name)}"><span>${esc(b.name)}</span></label>`).join('');
+$('#bizPick').innerHTML = bizRadios('事業');
+$('#pBizPick').innerHTML = bizRadios('事業');
+$('#taskForm')['状態'].innerHTML = TASK_STATUS.map(s => `<option>${s}</option>`).join('');
+let taskCtx = null;
+
+// ダイアログのボタンは submit で受ける（close イベントは環境によって遅れたり来なかったりするため）
+function onDialog(dlgSel, fn){
+  const dlg = $(dlgSel), form = dlg.querySelector('form');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = e.submitter ? e.submitter.value : 'ok';
+    dlg.close(v);
+    if (v !== 'cancel') fn(v);
+  });
+}
+
+function openTask(ctx){
+  taskCtx = ctx;
+  const f = $('#taskForm'), t = ctx.task || {};
+  f.reset();
+  $('#taskTitle').textContent = ctx.mode === 'edit' ? 'タスクを編集' : ctx.mode === 'cand' ? '候補をタスクにする' : 'タスクを追加';
+  $('#btnTomorrow').hidden = ctx.mode !== 'edit';
+  f['内容'].value = t['内容'] || '';
+  const date = ctx.mode === 'edit' ? (t['日付'] || '') : (t['日付'] ?? state.today);
+  f['日付'].value = date; f.nodate.checked = !date; f['日付'].disabled = !date;
+  const biz = t['事業'] || (ctx.mode === 'edit' ? '' : BIZ[0].name);
+  [...f.querySelectorAll('input[name="事業"]')].forEach(r => { r.checked = r.value === biz; });
+  const ps = state.projects || [];
+  const cur = t['プロジェクトID'] || '';
+  f['プロジェクトID'].innerHTML = '<option value="">なし</option>'
+    + ps.map(p => `<option value="${esc(p.ID)}">${esc(p['名前'])}</option>`).join('')
+    + (cur && !ps.some(p => p.ID === cur) ? `<option value="${esc(cur)}">${esc(cur)}（完了済み）</option>` : '');
+  f['プロジェクトID'].value = cur;
+  f['状態'].value = t['状態'] || '未';
+  f['期限'].value = t['期限'] || '';
+  f['見込み分'].value = t['見込み分'] || '';
+  f['メモ'].value = ctx.mode === 'edit' ? (t['メモ'] || '') : '';
+  $('#taskDlg').showModal();
+}
+$('#taskForm').nodate.addEventListener('change', e => {
+  const d = $('#taskForm')['日付'];
+  d.disabled = e.target.checked;
+  if (!e.target.checked && !d.value) d.value = state.today;
+});
+
+function taskFields(){
+  const f = $('#taskForm'), fd = new FormData(f);
+  return {
+    '内容': String(fd.get('内容') || '').trim(),
+    '日付': f.nodate.checked ? '' : f['日付'].value,
+    '事業': fd.get('事業') || '',
+    'プロジェクトID': f['プロジェクトID'].value,
+    '状態': f['状態'].value,
+    '期限': f['期限'].value,
+    '見込み分': f['見込み分'].value,
+    'メモ': String(fd.get('メモ') || '').trim(),
+  };
+}
+
+onDialog('#taskDlg', rv => {
+  const ctx = taskCtx;
+  if (!ctx) return;
+  if (rv === 'tomorrow'){
+    const base = ctx.task['日付'] && ctx.task['日付'] >= state.today ? ctx.task['日付'] : state.today;
+    const next = addDays(base, 1);
+    save(() => api('update', {id:ctx.task.ID, fields:{'日付':next, '状態': ctx.task['状態'] === '繰越' ? '未' : ctx.task['状態']}}), mdShort(next) + 'に移しました');
+    return;
+  }
+  const fields = taskFields();
+  if (!fields['内容']) return;
+  if (ctx.mode === 'edit'){
+    // 変わった列だけ送る
+    const diff = {};
+    Object.keys(fields).forEach(k => { if (String(ctx.task[k] ?? '') !== fields[k]) diff[k] = fields[k]; });
+    if (!Object.keys(diff).length) return;
+    save(() => api('update', {id:ctx.task.ID, fields:diff}), '保存しました');
+  } else {
+    if (!fields['メモ']) delete fields['メモ'];
+    save(() => api('add', {fields, inboxId: ctx.inboxId || ''}), '追加しました');
+  }
+});
+
+/* プロジェクト */
+let projCtx = null;
+function openProjView(id){
+  const p = (state.projects || []).find(x => x.ID === id); if (!p) return;
+  projCtx = p;
+  const ts = (state.projTasks || []).filter(t => t['プロジェクトID'] === id);
+  const openT = ts.filter(t => t['状態'] !== '済'), doneT = ts.filter(t => t['状態'] === '済');
+  $('#pvTitle').textContent = p['名前'];
+  $('#pvBody').innerHTML = `
+    <div class="meta pv-meta">${esc(p['事業'] || '事業未設定')}　${esc(p['状態'])}${p['期限'] ? '　期限 ' + esc(mdShort(p['期限'])) : ''}</div>
+    ${p['次の一手'] ? `<p class="pv-next">次：${esc(p['次の一手'])}</p>` : ''}
+    <div class="list">${openT.length ? openT.map(t => taskItem(t, {showDate:true})).join('') : '<div class="empty-note">未完了のタスクはありません。</div>'}</div>
+    ${doneT.length ? `<h4 class="pv-h">直近の済（14日）</h4><div class="list">${doneT.map(t => taskItem(t, {showDate:true})).join('')}</div>` : ''}`;
+  $('#projView').showModal();
+}
+$('#pvClose').addEventListener('click', () => $('#projView').close());
+$('#pvEdit').addEventListener('click', () => { $('#projView').close(); openProj(projCtx); });
+$('#pvAddTask').addEventListener('click', () => {
+  $('#projView').close();
+  openTask({mode:'add', task:{'プロジェクトID': projCtx.ID, '事業': projCtx['事業'], '日付': state.today}});
+});
+// 中身のダイアログからタスクを開いたときは、先に閉じる
+$('#pvBody').addEventListener('click', e => { if (e.target.closest('[data-act]')) $('#projView').close(); });
+
+function openProj(p){
+  projCtx = p;
+  const f = $('#projForm'); f.reset();
+  $('#projTitle').textContent = p ? 'プロジェクトを編集' : 'プロジェクトを追加';
+  f['名前'].value = p ? p['名前'] : '';
+  const biz = p ? p['事業'] : BIZ[0].name;
+  [...f.querySelectorAll('input[name="事業"]')].forEach(r => { r.checked = r.value === biz; });
+  f['状態'].value = p ? p['状態'] || '進行中' : '進行中';
+  f['期限'].value = p ? p['期限'] || '' : '';
+  f['次の一手'].value = p ? p['次の一手'] || '' : '';
+  $('#projDlg').showModal();
+}
+onDialog('#projDlg', () => {
+  const f = $('#projForm'), fd = new FormData(f);
+  const fields = {'名前': String(fd.get('名前')||'').trim(), '事業': fd.get('事業') || '', '状態': f['状態'].value, '期限': f['期限'].value, '次の一手': String(fd.get('次の一手')||'').trim()};
+  if (!fields['名前']) return;
+  if (projCtx){
+    const diff = {};
+    Object.keys(fields).forEach(k => { if (String(projCtx[k] ?? '') !== fields[k]) diff[k] = fields[k]; });
+    if (!Object.keys(diff).length) return;
+    save(() => api('pupdate', {id:projCtx.ID, fields:diff}), '保存しました');
+  } else {
+    save(() => api('padd', {fields}), '追加しました');
+  }
+});
+
 $('#fab').addEventListener('click', () => {
   if (!cfg.url){ openSettings(); return; }
-  $('#addForm').reset(); $('#addDlg').showModal();
-});
-$('#addDlg').addEventListener('close', async () => {
-  if ($('#addDlg').returnValue !== 'ok') return;
-  const fd = new FormData($('#addForm'));
-  const text = String(fd.get('text') || '').trim(); const biz = fd.get('biz');
-  if (!text) return;
-  const tmp = {ID:'tmp'+Date.now(), '日付':state.today, '内容':text, '事業':biz, '状態':'未', 'メモ':''};
-  act(() => { state.tasks.push(tmp); }, async () => { const r = await api('add', {text, biz}); tmp.ID = r.id; render(); }, '追加しました');
+  if (!state) return;
+  openTask({mode:'add', task:{'日付': state.today}});
 });
 
 /* 設定 */
@@ -439,38 +710,39 @@ function openSettings(){
   const f = $('#setForm'); f.url.value = cfg.url || ''; f.key.value = cfg.key || '';
   $('#setDlg').showModal();
 }
-$('#setDlg').addEventListener('close', () => {
-  if ($('#setDlg').returnValue !== 'ok') return;
+onDialog('#setDlg', () => {
   const f = $('#setForm');
   cfg = {url: f.url.value.trim(), key: f.key.value.trim()};
   store.set('board.cfg', cfg); state = null; store.set('board.cache', null);
   render(); load();
 });
 
-/* 戻ってきた時に自動更新 */
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cfg.url) load(); });
+/* 戻ってきた時に自動更新（ダイアログを開いている間はしない） */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && cfg.url && !document.querySelector('dialog[open]')) load();
+});
 
 /* ---------- 見本データ（URLに demo） ---------- */
 let demo = null;
 function demoApi(action, p){
   const ymd = dt => new Date(dt.getTime() + 9*3600e3).toISOString().slice(0,10);
-  const today = ymd(new Date()), yest = ymd(new Date(Date.now() - 864e5));
+  const today = ymd(new Date()), day = n => addDays(today, n);
   if (!demo) demo = {
     tasks:[
-      {ID:'T1','日付':today,'内容':'週末イベントのスタッフ名簿を送る','事業':'ギガネット（通信）','状態':'未','メモ':''},
+      {ID:'T1','日付':today,'内容':'週末イベントのスタッフ名簿を送る','事業':'ギガネット（通信）','状態':'未','メモ':'','期限':'','見込み分':'15'},
       {ID:'T2','日付':today,'内容':'交通費申請の未提出者にリマインド','事業':'ギガネット（通信）','状態':'済','メモ':''},
-      {ID:'T3','日付':today,'内容':'新商品の箱 修正版を確認に出す','事業':'円山製麺','状態':'未','メモ':''},
-      {ID:'T4','日付':today,'内容':'ラベル 賞味期限の更新','事業':'円山製麺','状態':'済','メモ':''},
+      {ID:'T3','日付':today,'内容':'新商品の箱 修正版を確認に出す','事業':'円山製麺','状態':'未','メモ':'','プロジェクトID':'P3'},
       {ID:'T5','日付':today,'内容':'メニューPOPの英語表記を確認','事業':'SHEEP GANG','状態':'未','メモ':''},
-      {ID:'T6','日付':today,'内容':'ボードのGASをデプロイ','事業':'個人','状態':'未','メモ':''},
+      {ID:'T0','日付':day(-1),'内容':'インスタ ストーリー投稿','事業':'円山製麺','状態':'未','メモ':''},
+      {ID:'T7','日付':day(2),'内容':'売り場の全体デザイン提案','事業':'円山製麺','状態':'未','メモ':'','プロジェクトID':'P3','期限':day(2)},
+      {ID:'T8','日付':day(5),'内容':'月初の交通費回収','事業':'エルダイブ','状態':'未','メモ':''},
+      {ID:'T9','日付':day(1),'内容':'契約書の返送','事業':'ギガネット（通信）','状態':'待ち','メモ':'先方の確認待ち','期限':day(4)},
+      {ID:'T10','日付':'','内容':'経費精算','事業':'エルダイブ','状態':'保留','メモ':'月末にまとめる'},
     ],
-    carry:[{ID:'T0','日付':yest,'内容':'インスタ ストーリー投稿','事業':'円山製麺','状態':'未','メモ':''}],
-    someday:[],
+    inbox:[{'行ID':'L1','日時':today+' 09:00','原文':'[Todoist] チラシを作るか検討','仕分け先':'候補（未確認）'}],
     projects:[
-      {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':ymd(new Date(Date.now()+12*864e5))},
-      {ID:'P2','名前':'年末年始 東海イベント','事業':'ギガネット（通信）','状態':'待ち','次の一手':'先方から詳細が来るのを待つ','期限':''},
-      {ID:'P3','名前':'新商品パッケージ','事業':'円山製麺','状態':'進行中','次の一手':'箱の入稿データ作成','期限':ymd(new Date(Date.now()-864e5))},
-      {ID:'P4','名前':'メニュー多言語化','事業':'SHEEP GANG','状態':'進行中','次の一手':'翻訳の確認','期限':''},
+      {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':day(12)},
+      {ID:'P3','名前':'新商品パッケージ','事業':'円山製麺','状態':'進行中','次の一手':'箱の入稿データ作成','期限':day(-1)},
       {ID:'P5','名前':'社内ToDoアプリ','事業':'エルダイブ','状態':'待ち','次の一手':'3人で公開範囲を決める','期限':''},
     ],
     goals:[
@@ -479,15 +751,39 @@ function demoApi(action, p){
     ],
     decisions:[
       {'日時':today+' 11:20','プロジェクトID':'P3','プロジェクト名':'新商品パッケージ','内容':'説明書は箱と別紙にする','状態':'確定','理由・却下案':'箱に印刷すると修正のたびに版代がかかる。却下案：箱の内側に印刷','チャットURL':'https://claude.ai/'},
-      {'日時':yest+' 18:05','プロジェクトID':'P1','プロジェクト名':'ショッピングモール催事','内容':'搬入は開店前に行う','状態':'保留','理由・却下案':'先方の回答待ち','チャットURL':''},
     ],
   };
-  const all = () => [...demo.tasks, ...demo.carry];
+  const T = demo.tasks, find = id => T.find(x => x.ID === id);
+  const open = s => s === '未' || s === '' || s === '繰越', wait = s => s === '待ち' || s === '保留';
   return new Promise(r => setTimeout(r, 150)).then(() => {
-    if (action === 'data') return JSON.parse(JSON.stringify({...demo, today, fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)}));
-    if (action === 'status'){ const t = all().find(x => x.ID === p.id); if (t) t['状態'] = p.status; if (p.status==='捨') demo.carry = demo.carry.filter(x => x.ID !== p.id); return {}; }
-    if (action === 'keep'){ const t = demo.carry.find(x => x.ID === p.id); demo.carry = demo.carry.filter(x => x.ID !== p.id); t['日付']=today; demo.tasks.push(t); return {}; }
-    if (action === 'add'){ const id = 'T'+Date.now(); demo.tasks.push({ID:id,'日付':today,'内容':p.text,'事業':p.biz,'状態':'未','メモ':''}); return {id}; }
+    if (action === 'data'){
+      const in7 = day(7);
+      return JSON.parse(JSON.stringify({
+        today,
+        tasks: T.filter(t => t['日付'] === today && t['状態'] !== '捨' && !wait(t['状態'])),
+        carry: T.filter(t => t['日付'] && t['日付'] < today && open(t['状態'])),
+        upcoming: T.filter(t => t['日付'] > today && t['日付'] <= in7 && (open(t['状態']) || wait(t['状態']))).sort((a,b) => a['日付'] < b['日付'] ? -1 : 1),
+        waiting: T.filter(t => wait(t['状態'])),
+        someday: T.filter(t => !t['日付'] && open(t['状態'])),
+        projTasks: T.filter(t => t['プロジェクトID'] && t['状態'] !== '捨'),
+        projects: demo.projects.filter(x => x['状態'] !== '完了'),
+        goals: demo.goals, decisions: demo.decisions,
+        candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
+        fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)
+      }));
+    }
+    if (action === 'status'){ const t = find(p.id); if (t) t['状態'] = p.status; return {}; }
+    if (action === 'keep'){ const t = find(p.id); if (t){ t['日付'] = today; t['状態'] = '未'; } return {}; }
+    if (action === 'add'){
+      const id = 'T' + Date.now(); const f = p.fields || {'内容':p.text,'事業':p.biz};
+      T.push({ID:id, '日付': '日付' in f ? f['日付'] : today, '状態':'未', 'メモ':'', ...f});
+      if (p.inboxId){ const c = demo.inbox.find(x => x['行ID'] === p.inboxId); if (c){ c['仕分け先'] = 'タスク追加'; c['反映先ID'] = id; } }
+      return {id};
+    }
+    if (action === 'update'){ Object.assign(find(p.id), p.fields); return {}; }
+    if (action === 'padd'){ const id = 'P' + Date.now(); demo.projects.push({ID:id, ...p.fields}); return {id}; }
+    if (action === 'pupdate'){ Object.assign(demo.projects.find(x => x.ID === p.id), p.fields); return {}; }
+    if (action === 'cand'){ const c = demo.inbox.find(x => x['行ID'] === p.rowId); if (c) c['仕分け先'] = '候補（不要）'; return {}; }
   });
 }
 
