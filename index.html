@@ -418,7 +418,7 @@ const mdShort = ymd => String(ymd).slice(5).replace('-','/');
 function short(text, n = 13){
   let t = String(text || '').replace(/[（(][^）)]*[）)]/g, '').replace(/\s+/g, ' ').trim();
   const head = t.split(/[、。，,]/)[0].trim();
-  if (head) t = head;
+  if (head.length >= 6) t = head;   // 切った結果が短すぎる（「近藤さんに」など）ときは、全体を使う
   if (!t) t = String(text || '');
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
