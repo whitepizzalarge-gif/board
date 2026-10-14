@@ -41,7 +41,7 @@ body{
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+.wrap{max-width:none;margin:0;padding:0 clamp(16px,2.5vw,40px)}
 
 /* ---- 今日の見出し ---- */
 .today{padding:20px 0 18px}
@@ -119,7 +119,7 @@ h2 .n{font-weight:500;color:var(--sub);font-size:13px}
 /* 下部 */
 .foot{margin-top:28px;font-size:12px;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
 .link{background:none;border:0;color:var(--accent);padding:6px 0;font-size:13px}
-.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(20px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(20,40,90,.28)}
+.fab{position:fixed;right:max(16px,2vw);bottom:calc(20px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(20,40,90,.28)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
 
@@ -146,10 +146,61 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
-.works{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:2px 0 6px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none}
-.works::-webkit-scrollbar{display:none}
-.wcard{flex:0 0 calc(50% - 5px);min-width:150px;scroll-snap-align:start;background:var(--surface);border-radius:14px;padding:12px 14px;border-top:4px solid var(--c)}
-.wcard h3{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--c)}
+/* ---- 画面全体の並べ方：狭いと1列、広いと2〜3列 ---- */
+#app{display:block}
+.a-works{grid-area:works}.a-head{grid-area:head}.a-left{grid-area:left}.a-cal{grid-area:cal}
+.a-mid{grid-area:mid}.a-right{grid-area:right}.a-foot{grid-area:foot}
+@media (min-width:700px){
+  #app{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;align-items:start;
+    grid-template-areas:"works works" "head head" "left left" "cal cal" "mid right" "foot foot"}
+  dialog{margin:auto;border-radius:18px}
+}
+@media (min-width:1100px){
+  #app{grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-areas:"works works works" "head head head" "left cal cal" "left mid right" "foot foot foot"}
+}
+
+/* ---- カレンダー（7日間を横に並べる） ---- */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal-day{background:var(--surface);border-radius:12px;padding:8px 4px;min-height:76px;cursor:pointer;border:2px solid transparent;min-width:0}
+.cal-day.sel{border-color:var(--accent)}
+.cal-h{display:flex;align-items:baseline;gap:3px;justify-content:center;margin-bottom:6px}
+.cal-h b{font-size:17px;font-variant-numeric:tabular-nums}
+.cal-h small{font-size:11px;color:var(--sub)}
+.cal-day.sun .cal-h b,.cal-day.sun .cal-h small{color:var(--danger)}
+.cal-day.sat .cal-h b,.cal-day.sat .cal-h small{color:var(--b-giga)}
+.cell-dots{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c,var(--b-self))}
+.dot.ev{background:transparent;border:2px solid var(--sub);box-sizing:border-box}
+.cell-full{display:none}
+.cal-detail{margin-top:12px}
+.cal-task{display:flex;gap:6px;align-items:flex-start;padding:5px 6px;border-left:3px solid var(--c);margin-top:4px;background:var(--bg);border-radius:6px}
+.cal-chk{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--c);background:transparent;padding:0;margin-top:1px}
+.cal-task.is-done .cal-chk{background:var(--c)}
+.cal-task.is-done .cal-title{color:var(--sub);text-decoration:line-through}
+.cal-title{font-size:13px;line-height:1.35;word-break:break-word;flex:1;min-width:0}
+.cal-ev{font-size:12.5px;color:var(--sub);padding:4px 6px;border-left:3px solid var(--line);margin-top:4px;line-height:1.35;word-break:break-word}
+.cal-ev span{margin-right:5px;font-variant-numeric:tabular-nums}
+@media (min-width:700px){
+  .cell-dots{display:none}
+  .cell-full{display:block}
+  .cal-detail{display:none}
+  .cal-day{padding:10px 8px;min-height:150px;cursor:default}
+  .cal-h{justify-content:flex-start}
+}
+
+/* ---- 事業をタップしたときの中身 ---- */
+.bv-sec{font-size:13px;color:var(--sub);margin:12px 0 6px;font-weight:700}
+.bv-works{display:flex;flex-wrap:wrap;gap:6px}
+.bv-works span{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13.5px}
+
+/* 事業カード：画面の幅いっぱいに折り返して並べる（横スクロールなし） */
+.works{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+button.wcard{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;width:100%;text-align:left;font:inherit;color:inherit;border:0;cursor:pointer;background:var(--surface);border-radius:14px;padding:12px 14px;border-top:4px solid var(--c)}
+button.wcard:active{opacity:.7}
+.wcard h3{margin:0 0 6px;font-size:14px;font-weight:700;color:var(--c)}
+.wcard .wfoot{margin-top:auto;padding-top:8px;font-size:12px;color:var(--sub)}
+.works-sec{margin-top:14px}
 .wcard ul{margin:0;padding:0;list-style:none}
 .wcard li{font-size:14.5px;padding:5px 0;border-top:1px solid var(--line)}
 .wcard li:first-child{border-top:0;padding-top:0}
@@ -229,15 +280,14 @@ dialog{max-height:92vh;overflow:auto}
   </form>
 </dialog>
 
-<!-- プロジェクトの中身 -->
-<dialog id="projView">
+<!-- 事業の中身：この事業で動いているプロジェクト -->
+<dialog id="bizView">
   <div class="sheet">
-    <h3 id="pvTitle"></h3>
-    <div id="pvBody"></div>
+    <h3 id="bvTitle"></h3>
+    <div id="bvBody"></div>
     <div class="row-btns">
-      <button class="btn sec left" id="pvAddTask">タスクを足す</button>
-      <button class="btn sec" id="pvClose">閉じる</button>
-      <button class="btn pri" id="pvEdit">編集</button>
+      <button class="btn sec left" id="bvAdd">＋ プロジェクトを足す</button>
+      <button class="btn pri" id="bvClose">閉じる</button>
     </div>
   </div>
 </dialog>
@@ -333,6 +383,7 @@ async function load(){
     state = await api('data');
     store.set('board.cache', state);
     render();
+    if ($('#bizView').open) fillBiz();
   } catch(e){
     render(e);
   }
@@ -361,48 +412,53 @@ function render(err){
   const cands = state.candidates || [];
 
   app.innerHTML = `
-    <header class="today">
-      <div class="today-row">
-        <div class="date">${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small></div>
-        <div class="count"><b>${done}/${tasks.length}</b>今日の完了</div>
-      </div>
-      <div class="strip ${tasks.length?'':'empty'}" aria-hidden="true">${strip}</div>
-    </header>
-    ${err ? errBox(err) : ''}
-    ${state.carry.length ? `
-    <section class="carry">
-      <h2>前日までの残り <span class="n">${state.carry.length}件 ・ 今日やるか、やめるか</span></h2>
-      <div class="list">${state.carry.map(carryItem).join('')}</div>
-    </section>` : ''}
-    <section>
-      <h2>今日やること <span class="n">${tasks.length}件</span></h2>
-      ${eventsHtml(state.today)}
-      ${tasks.length ? `<div class="list">${tasks.map(t => taskItem(t)).join('')}</div>`
-        : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
-    </section>
-    ${upcomingHtml()}
-    ${waiting.length ? `
-    <section>
-      <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
-      <div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>
-    </section>` : ''}
-    ${worksHtml()}
-    ${projectsHtml()}
-    ${goalsHtml()}
-    ${decisionsHtml()}
-    ${state.someday && state.someday.length ? `
-    <section>
-      <h2>日付なし <span class="n">${state.someday.length}件</span></h2>
-      <div class="list">${state.someday.map(t => taskItem(t)).join('')}</div>
-    </section>` : ''}
-    ${cands.length ? `
-    <section>
-      <details class="more cands">
-        <summary>候補 ${cands.length}件 <span class="n">Claudeが拾った未確認のもの</span></summary>
-        <div class="list">${cands.map(candItem).join('')}</div>
-      </details>
-    </section>` : ''}
-    <div class="foot">
+    <div class="a-works">${worksHtml()}</div>
+    <div class="a-head">
+      <header class="today">
+        <div class="today-row">
+          <div class="date">${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small></div>
+          <div class="count"><b>${done}/${tasks.length}</b>今日の完了</div>
+        </div>
+        <div class="strip ${tasks.length?'':'empty'}" aria-hidden="true">${strip}</div>
+      </header>
+      ${err ? errBox(err) : ''}
+    </div>
+    <div class="a-left">
+      ${state.carry.length ? `
+      <section class="carry">
+        <h2>前日までの残り <span class="n">${state.carry.length}件 ・ 今日やるか、やめるか</span></h2>
+        <div class="list">${state.carry.map(carryItem).join('')}</div>
+      </section>` : ''}
+      <section>
+        <h2>今日やること <span class="n">${tasks.length}件</span></h2>
+        ${eventsHtml(state.today)}
+        ${tasks.length ? `<div class="list">${tasks.map(t => taskItem(t)).join('')}</div>`
+          : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
+      </section>
+      ${waiting.length ? `
+      <section>
+        <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
+        <div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>
+      </section>` : ''}
+    </div>
+    <div class="a-cal">${upcomingHtml()}</div>
+    <div class="a-mid">${goalsHtml()}</div>
+    <div class="a-right">
+      ${decisionsHtml()}
+      ${state.someday && state.someday.length ? `
+      <section>
+        <h2>日付なし <span class="n">${state.someday.length}件</span></h2>
+        <div class="list">${state.someday.map(t => taskItem(t)).join('')}</div>
+      </section>` : ''}
+      ${cands.length ? `
+      <section>
+        <details class="more cands">
+          <summary>候補 ${cands.length}件 <span class="n">Claudeが拾った未確認のもの</span></summary>
+          <div class="list">${cands.map(candItem).join('')}</div>
+        </details>
+      </section>` : ''}
+    </div>
+    <div class="foot a-foot">
       <span>${esc(state.fetchedAt)} 時点</span>
       <span><button class="link" data-act="reload">更新</button>　<button class="link" data-act="settings">設定</button></span>
     </div>`;
@@ -476,59 +532,70 @@ function eventsHtml(day){
   </div>`).join('')}</div>`;
 }
 
-// 明日〜7日後を日付ごとに（タスクと予定を同じ日付の下に）
+// カレンダー：明日から7日間を横に並べる。狭い画面は点だけ出して、タップした日の中身を下に出す
+let calSel = null;
+function calTask(t){
+  const done = t['状態'] === '済', wait = t['状態'] === '待ち' || t['状態'] === '保留';
+  return `<div class="cal-task ${done?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
+    <button class="cal-chk" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${done?'未完了に戻す':'完了にする'}：${esc(t['内容'])}"></button>
+    <button class="tap cal-title" data-act="edit" data-id="${esc(t.ID)}">${esc(t['内容'])}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
+  </div>`;
+}
 function upcomingHtml(){
   const ups = state.upcoming || [];
-  const last = addDays(state.today, 7);
-  const evDays = (state.events || []).map(e => e.date).filter(d => d > state.today && d <= last);
-  const days = [...new Set([...ups.map(t => t['日付']), ...evDays])].sort();
-  if (!days.length) return '';
-  return `<section>
+  const days = Array.from({length: 7}, (_, i) => addDays(state.today, i + 1));
+  const has = d => ups.some(t => t['日付'] === d) || eventsOn(d).length > 0;
+  const sel = calSel && days.includes(calSel) ? calSel : (days.find(has) || days[0]);
+  const cells = days.map(day => {
+    const ts = ups.filter(t => t['日付'] === day), es = eventsOn(day);
+    const wd = new Date(day + 'T00:00:00Z').getUTCDay();
+    const dots = es.map(() => '<i class="dot ev"></i>').join('')
+      + ts.map(t => `<i class="dot" style="--c:var(${bizVar(t['事業'])})"></i>`).join('');
+    return `<div class="cal-day ${wd===0?'sun':wd===6?'sat':''} ${day===sel?'sel':''}" data-act="calday" data-day="${day}">
+      <div class="cal-h"><b>${+day.slice(8)}</b><small>${WD[wd]}</small></div>
+      <div class="cell-dots">${dots}</div>
+      <div class="cell-full">
+        ${es.map(e => `<div class="cal-ev"><span>${e.start ? esc(e.start) : '終日'}</span>${esc(e.title)}</div>`).join('')}
+        ${ts.map(calTask).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  const dts = ups.filter(t => t['日付'] === sel);
+  return `<section id="cal">
     <h2>これから <span class="n">7日間・タスク${ups.length}件</span></h2>
-    ${days.map(day => {
-      const ts = ups.filter(t => t['日付'] === day);
-      return `<div class="day-head">${esc(md(day))}</div>
-      ${eventsHtml(day)}
-      ${ts.length ? `<div class="list">${ts.map(t => taskItem(t)).join('')}</div>` : ''}`;
-    }).join('')}
+    <div class="cal">${cells}</div>
+    <div class="cal-detail">
+      <div class="day-head">${esc(md(sel))}</div>
+      ${eventsHtml(sel)}
+      ${dts.length ? `<div class="list">${dts.map(t => taskItem(t)).join('')}</div>`
+        : (eventsOn(sel).length ? '' : '<p class="empty-note">この日の予定・タスクはありません。</p>')}
+    </div>
   </section>`;
 }
 
-// 事業を横に並べ、その下に担当している業務（スプシの「業務」タブ）
+// 事業を横に並べ、その下に担当している業務（スプシの「業務」タブ）。タップで、その事業で動いているプロジェクトを見る
+function bizList(){
+  const ps = state.projects || [], ws = state.works || [];
+  const list = BIZ.filter(b => ws.some(w => w['事業'] === b.name) || ps.some(p => p['事業'] === b.name));
+  if (ps.some(p => bizOrder(p['事業']) === 99)) list.push({name:'事業未設定', v:'--b-self'});
+  return list;
+}
 function worksHtml(){
-  const ws = state.works || [];
-  if (!ws.length) return '';
-  const cols = BIZ.map(b => ({b, items: ws.filter(w => w['事業'] === b.name)})).filter(c => c.items.length);
-  return `<section>
-    <h2>事業と業務 <span class="n">横にスクロール</span></h2>
-    <div class="works">${cols.map(c => `<div class="wcard" style="--c:var(${c.b.v})">
-      <h3>${esc(c.b.name)}</h3>
-      <ul>${c.items.map(w => `<li>${esc(w['業務'])}</li>`).join('')}</ul>
-    </div>`).join('')}</div>
-  </section>`;
-}
-
-function projectsHtml(){
-  const ps = state.projects || [];
-  const groups = BIZ.map(b => ({b, items: ps.filter(p => p['事業'] === b.name)}))
-    .concat([{b:{name:'事業未設定', v:'--b-self'}, items: ps.filter(p => bizOrder(p['事業']) === 99)}])
-    .filter(g => g.items.length);
-  const today = state.today;
-  const open = id => (state.projTasks || []).filter(t => t['プロジェクトID'] === id && t['状態'] !== '済').length;
-  return `<section>
-    <h2>プロジェクト <span class="n">${ps.length}件</span><button class="link h-act" data-act="padd">＋追加</button></h2>
-    ${ps.length ? groups.map(g => `
-      <div class="biz-head" style="--c:var(${g.b.v})">${esc(g.b.name)}</div>
-      <div class="list">${g.items.map(p => {
-        const over = p['期限'] && p['期限'] < today;
-        const n = open(p.ID);
-        return `<button class="item proj tap" data-act="pview" data-id="${esc(p.ID)}" style="--c:var(${g.b.v})"><div class="body">
-          <div class="title">${esc(p['名前'])}${p['状態']==='待ち' ? '<span class="chip wait">待ち</span>' : ''}${n ? `<span class="chip">${n}件</span>` : ''}</div>
-          ${p['次の一手'] ? `<div class="next">${esc(p['次の一手'])}</div>` : ''}
-          ${p['期限'] ? `<div class="meta ${over?'due-over':''}">期限 ${esc(mdShort(p['期限']))}${over?'（過ぎています）':''}</div>` : ''}
-        </div></button>`;
-      }).join('')}</div>`).join('')
-    : `<p class="empty-note">進行中のプロジェクトはありません。</p>`}
+  const ws = state.works || [], ps = state.projects || [], today = state.today;
+  const cols = bizList();
+  if (!cols.length) return '';
+  return `<section class="works-sec">
+    <h2>事業 <span class="n">タップで動いているプロジェクト</span></h2>
+    <div class="works">${cols.map(b => {
+      const items = ws.filter(w => w['事業'] === b.name);
+      const pj = ps.filter(p => b.name === '事業未設定' ? bizOrder(p['事業']) === 99 : p['事業'] === b.name);
+      const over = pj.some(p => p['期限'] && p['期限'] < today);
+      return `<button class="wcard" data-act="bizview" data-biz="${esc(b.name)}" style="--c:var(${b.v})">
+        <h3>${esc(b.name)}</h3>
+        <ul>${items.map(w => `<li>${esc(w['業務'])}</li>`).join('')}</ul>
+        <div class="wfoot ${over?'due-over':''}">プロジェクト ${pj.length}件${over?'・期限切れあり':''}</div>
+      </button>`;
+    }).join('')}</div>
   </section>`;
 }
 
@@ -615,8 +682,9 @@ document.addEventListener('click', e => {
       break;
     }
     case 'edit': { const t = findTask(id); if (t) openTask({mode:'edit', task:t}); break; }
-    case 'pview': openProjView(id); break;
-    case 'padd': openProj(null); break;
+    case 'bizview': openBiz(b.dataset.biz); break;
+    case 'pedit': { const pr = (state.projects || []).find(x => x.ID === id); if (pr) openProj(pr); break; }
+    case 'calday': calSel = b.dataset.day; $('#cal').outerHTML = upcomingHtml(); break;
     case 'cand-take': {
       const c = (state.candidates || []).find(x => x['行ID'] === id); if (!c) return;
       openTask({mode:'cand', task:{'内容': String(c['原文']).replace(/^\[[^\]]*\]\s*/, ''), '日付': state.today}, inboxId:id});
@@ -716,36 +784,40 @@ onDialog('#taskDlg', rv => {
   }
 });
 
-/* プロジェクト */
-let projCtx = null;
-function openProjView(id){
-  const p = (state.projects || []).find(x => x.ID === id); if (!p) return;
-  projCtx = p;
-  const ts = (state.projTasks || []).filter(t => t['プロジェクトID'] === id);
-  const openT = ts.filter(t => t['状態'] !== '済'), doneT = ts.filter(t => t['状態'] === '済');
-  $('#pvTitle').textContent = p['名前'];
-  $('#pvBody').innerHTML = `
-    <div class="meta pv-meta">${esc(p['事業'] || '事業未設定')}　${esc(p['状態'])}${p['期限'] ? '　期限 ' + esc(mdShort(p['期限'])) : ''}</div>
-    ${p['次の一手'] ? `<p class="pv-next">次：${esc(p['次の一手'])}</p>` : ''}
-    <div class="list">${openT.length ? openT.map(t => taskItem(t, {showDate:true})).join('') : '<div class="empty-note">未完了のタスクはありません。</div>'}</div>
-    ${doneT.length ? `<h4 class="pv-h">直近の済（14日）</h4><div class="list">${doneT.map(t => taskItem(t, {showDate:true})).join('')}</div>` : ''}`;
-  $('#projView').showModal();
+/* 事業の中身（この事業で動いているプロジェクト） */
+let projCtx = null, curBiz = '';
+function openBiz(name){
+  curBiz = name;
+  fillBiz();
+  $('#bizView').showModal();
 }
-$('#pvClose').addEventListener('click', () => $('#projView').close());
-$('#pvEdit').addEventListener('click', () => { $('#projView').close(); openProj(projCtx); });
-$('#pvAddTask').addEventListener('click', () => {
-  $('#projView').close();
-  openTask({mode:'add', task:{'プロジェクトID': projCtx.ID, '事業': projCtx['事業'], '日付': state.today}});
-});
-// 中身のダイアログからタスクを開いたときは、先に閉じる
-$('#pvBody').addEventListener('click', e => { if (e.target.closest('[data-act]')) $('#projView').close(); });
+function fillBiz(){
+  const today = state.today;
+  const ps = (state.projects || []).filter(p => curBiz === '事業未設定' ? bizOrder(p['事業']) === 99 : p['事業'] === curBiz);
+  const ws = (state.works || []).filter(w => w['事業'] === curBiz);
+  $('#bvTitle').textContent = curBiz;
+  $('#bvTitle').style.color = `var(${bizVar(curBiz)})`;
+  $('#bvBody').innerHTML = `
+    <div class="bv-sec">動いているプロジェクト</div>
+    ${ps.length ? `<div class="list">${ps.map(p => {
+      const over = p['期限'] && p['期限'] < today;
+      return `<button class="item proj tap" data-act="pedit" data-id="${esc(p.ID)}" style="--c:var(${bizVar(p['事業'])})"><div class="body">
+        <div class="title">${esc(p['名前'])}${p['状態']==='待ち' ? '<span class="chip wait">待ち</span>' : ''}</div>
+        ${p['次の一手'] ? `<div class="next">${esc(p['次の一手'])}</div>` : ''}
+        ${p['期限'] ? `<div class="meta ${over?'due-over':''}">期限 ${esc(mdShort(p['期限']))}${over?'（過ぎています）':''}</div>` : ''}
+      </div></button>`;
+    }).join('')}</div>` : '<p class="empty-note">動いているプロジェクトはまだありません。下の「＋ プロジェクトを足す」か、Claudeに伝えて追加します。</p>'}
+    ${ws.length ? `<div class="bv-sec">担当している業務</div><div class="bv-works">${ws.map(w => `<span>${esc(w['業務'])}</span>`).join('')}</div>` : ''}`;
+}
+$('#bvClose').addEventListener('click', () => $('#bizView').close());
+$('#bvAdd').addEventListener('click', () => openProj(null, curBiz === '事業未設定' ? '' : curBiz));
 
-function openProj(p){
+function openProj(p, defBiz){
   projCtx = p;
   const f = $('#projForm'); f.reset();
   $('#projTitle').textContent = p ? 'プロジェクトを編集' : 'プロジェクトを追加';
   f['名前'].value = p ? p['名前'] : '';
-  const biz = p ? p['事業'] : BIZ[0].name;
+  const biz = p ? p['事業'] : (defBiz || BIZ[0].name);
   [...f.querySelectorAll('input[name="事業"]')].forEach(r => { r.checked = r.value === biz; });
   f['状態'].value = p ? p['状態'] || '進行中' : '進行中';
   f['期限'].value = p ? p['期限'] || '' : '';
