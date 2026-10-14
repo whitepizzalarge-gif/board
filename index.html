@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ボード</title>
+<meta name="theme-color" content="#E9EDF2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151B23" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ボード">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDF2; --surface:#F7F9FB; --ink:#1C2733; --sub:#5B6775; --line:#D3DAE2; --accent:#2F55C8;
+  --b-giga:#2563C9; --b-maru:#B98117; --b-sheep:#8C3B2C; --b-eld:#7A4CCB; --b-poto:#2D8A6C; --b-self:#6B7480;
+  --danger:#B23A3A;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#151B23; --surface:#1D2530; --ink:#E6EBF1; --sub:#98A3B1; --line:#2E3946; --accent:#7D9BF2;
+    --b-giga:#6E9BEA; --b-maru:#DDAA48; --b-sheep:#D17A68; --b-eld:#A887E6; --b-poto:#5DBB98; --b-self:#9AA3AE;
+    --danger:#E07272;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
+  font-size:16px; line-height:1.55; font-feature-settings:"palt";
+  padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+/* ---- 今日の見出し ---- */
+.today{padding:20px 0 18px}
+.today-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.date{font-weight:900;font-size:56px;line-height:.9;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.date small{font-size:20px;font-weight:700;margin-left:6px;letter-spacing:0;color:var(--sub)}
+.count{font-size:14px;color:var(--sub);text-align:right;line-height:1.3}
+.count b{display:block;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+.strip{display:flex;gap:3px;margin-top:14px;height:10px}
+.strip span{flex:1;border-radius:2px;background:var(--c);opacity:.22}
+.strip span.done{opacity:1}
+.strip.empty span{background:var(--line);opacity:1}
+
+/* ---- セクション ---- */
+section{margin-top:28px}
+h2{font-size:15px;font-weight:700;margin:0 0 8px;display:flex;align-items:baseline;gap:8px}
+h2 .n{font-weight:500;color:var(--sub);font-size:13px}
+.list{background:var(--surface);border-radius:14px;overflow:hidden}
+.item{display:flex;align-items:flex-start;gap:12px;padding:13px 14px 13px 0;border-top:1px solid var(--line);position:relative}
+.item:first-child{border-top:0}
+.item::before{content:"";align-self:stretch;width:4px;border-radius:0 3px 3px 0;background:var(--c,var(--b-self));flex:none}
+.body{flex:1;min-width:0}
+.title{word-break:break-word}
+.meta{font-size:12.5px;color:var(--sub);margin-top:2px}
+.meta .biz{color:var(--c)}
+.empty-note{padding:16px;color:var(--sub);font-size:14px;background:var(--surface);border-radius:14px}
+
+/* チェック */
+.check{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--c,var(--sub));background:transparent;margin-top:-1px;display:grid;place-items:center;padding:0}
+.check svg{width:14px;height:14px;opacity:0}
+.item.is-done .check{background:var(--c)}
+.item.is-done .check svg{opacity:1}
+.item.is-done .title{color:var(--sub);text-decoration:line-through;text-decoration-thickness:1px}
+
+/* 繰越 */
+.carry .acts{display:flex;gap:6px;flex:none}
+.btn-s{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 10px;font-size:13px}
+.btn-s.keep{border-color:var(--accent);color:var(--accent)}
+.btn-s.drop{color:var(--sub)}
+
+/* プロジェクト */
+.biz-head{font-size:13px;font-weight:700;color:var(--c);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.biz-head::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.proj .next{font-size:14px;margin-top:3px}
+.proj .next::before{content:"次 ";color:var(--sub);font-size:12px}
+.chip{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:5px;border:1px solid var(--line);color:var(--sub);margin-left:6px;vertical-align:1px}
+.chip.wait{border-color:var(--b-maru);color:var(--b-maru)}
+.due-over{color:var(--danger);font-weight:700}
+
+/* 目標 */
+.goals{display:grid;gap:10px}
+.goal-block{background:var(--surface);border-radius:14px;padding:14px 16px}
+.goal-block h3{margin:0 0 6px;font-size:13px;color:var(--sub);font-weight:700}
+.goal{padding:8px 0;border-top:1px solid var(--line)}
+.goal:first-of-type{border-top:0;padding-top:0}
+.goal .gt{font-weight:700}
+.goal .gbiz{display:inline-block;font-size:12px;font-weight:700;color:var(--c);border-left:3px solid var(--c);padding-left:6px;margin-bottom:2px}
+.goal dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13.5px}
+.goal dt{color:var(--sub)}
+.goal dd{margin:0}
+
+/* 決定ログ */
+.dec .title{font-size:15px}
+.dec .why{font-size:13px;color:var(--sub);margin-top:3px;white-space:pre-wrap}
+.dec .why::before{content:"理由・却下案 ";font-size:11.5px}
+.chip.st-確定{border-color:var(--accent);color:var(--accent)}
+.chip.st-保留{border-color:var(--b-maru);color:var(--b-maru)}
+.item.is-void .title{color:var(--sub);text-decoration:line-through;text-decoration-thickness:1px}
+.dec a{color:var(--accent);text-decoration:none}
+.more{margin-top:8px}
+.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:6px 0;list-style:none}
+.more summary::-webkit-details-marker{display:none}
+.more .list{margin-top:6px}
+
+/* 下部 */
+.foot{margin-top:28px;font-size:12px;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
+.link{background:none;border:0;color:var(--accent);padding:6px 0;font-size:13px}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(20px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(20,40,90,.28)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+
+/* シート */
+dialog{border:0;padding:0;width:100%;max-width:560px;margin:auto auto 0;border-radius:18px 18px 0 0;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(10,16,24,.45)}
+.sheet{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 12px;font-size:17px}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
+.field input,.field textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 12px;font-size:16px}
+.field textarea{min-height:76px;resize:vertical}
+.bizpick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.bizpick label{position:relative}
+.bizpick input{position:absolute;opacity:0}
+.bizpick span{display:block;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13.5px}
+.bizpick input:checked+span{background:var(--c);border-color:var(--c);color:#fff}
+.bizpick input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.row-btns{display:flex;gap:8px;justify-content:flex-end}
+.btn{border:0;border-radius:10px;padding:11px 18px;font-weight:700}
+.btn.pri{background:var(--accent);color:#fff}
+.btn.sec{background:transparent;border:1px solid var(--line)}
+.hint{font-size:12.5px;color:var(--sub);margin:-4px 0 12px}
+.err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap" id="app" aria-live="polite"></main>
+
+<button class="fab" id="fab" aria-label="今日のタスクを追加">＋</button>
+<div class="toast" id="toast" role="status"></div>
+
+<dialog id="addDlg">
+  <form class="sheet" method="dialog" id="addForm">
+    <h3>今日のタスクを追加</h3>
+    <label class="field"><span>内容</span><textarea name="text" required></textarea></label>
+    <div class="bizpick" id="bizPick"></div>
+    <div class="row-btns">
+      <button class="btn sec" value="cancel" formnovalidate>やめる</button>
+      <button class="btn pri" value="ok">追加する</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="setDlg">
+  <form class="sheet" method="dialog" id="setForm">
+    <h3>接続の設定</h3>
+    <p class="hint">GASのウェブアプリURLと、setupで出た合言葉を入れます。この端末にだけ保存されます。URLに demo と入れると見本データで表示します。</p>
+    <label class="field"><span>ウェブアプリURL</span><input name="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="field"><span>合言葉</span><input name="key" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <div class="row-btns">
+      <button class="btn sec" value="cancel" formnovalidate>やめる</button>
+      <button class="btn pri" value="ok">保存する</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const BIZ = [
+  {name:'ギガネット（通信）', v:'--b-giga'},
+  {name:'円山製麺', v:'--b-maru'},
+  {name:'SHEEP GANG', v:'--b-sheep'},
+  {name:'エルダイブ', v:'--b-eld'},
+  {name:'ぽとふ', v:'--b-poto'},
+  {name:'個人', v:'--b-self'},
+];
+const bizVar = n => (BIZ.find(b => b.name === n) || {v:'--b-self'}).v;
+const bizOrder = n => { const i = BIZ.findIndex(b => b.name === n); return i < 0 ? 99 : i; };
+const WD = ['日','月','火','水','木','金','土'];
+
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+let cfg = store.get('board.cfg', {url:'', key:''});
+let state = store.get('board.cache', null);
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- 通信 ---------- */
+async function api(action, params = {}){
+  if (cfg.url === 'demo') return demoApi(action, params);
+  if (!cfg.url || !cfg.key) throw new Error('not_configured');
+  // 合言葉はURLに載せず、すべて本文で送る
+  const res = await fetch(cfg.url, {method:'POST', cache:'no-store', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({action, key:cfg.key, ...params})});
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'error');
+  return j.data;
+}
+
+async function load(){
+  try {
+    state = await api('data');
+    store.set('board.cache', state);
+    render();
+  } catch(e){
+    render(e);
+  }
+}
+
+/* ---------- 描画 ---------- */
+function render(err){
+  const app = $('#app');
+  if (!cfg.url){
+    app.innerHTML = `<div class="today"><div class="date">ボード</div></div>
+      <p class="empty-note">接続先がまだ設定されていません。</p>
+      <div class="foot"><span></span><button class="link" data-act="settings">接続を設定する</button></div>`;
+    return;
+  }
+  if (!state){
+    app.innerHTML = `<div class="today"><div class="date">…</div></div>` + (err ? errBox(err) : '');
+    return;
+  }
+  const d = new Date(state.today + 'T00:00:00+09:00');
+  const tasks = [...state.tasks].sort((a,b) => (a['状態']==='済') - (b['状態']==='済') || bizOrder(a['事業']) - bizOrder(b['事業']));
+  const done = tasks.filter(t => t['状態'] === '済').length;
+  const strip = tasks.length
+    ? tasks.map(t => `<span class="${t['状態']==='済'?'done':''}" style="--c:var(${bizVar(t['事業'])})"></span>`).join('')
+    : '<span></span>';
+
+  app.innerHTML = `
+    <header class="today">
+      <div class="today-row">
+        <div class="date">${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small></div>
+        <div class="count"><b>${done}/${tasks.length}</b>今日の完了</div>
+      </div>
+      <div class="strip ${tasks.length?'':'empty'}" aria-hidden="true">${strip}</div>
+    </header>
+    ${err ? errBox(err) : ''}
+    ${state.carry.length ? `
+    <section class="carry">
+      <h2>前日までの残り <span class="n">${state.carry.length}件 ・ 今日やるか、やめるか</span></h2>
+      <div class="list">${state.carry.map(carryItem).join('')}</div>
+    </section>` : ''}
+    <section>
+      <h2>今日やること <span class="n">${tasks.length}件</span></h2>
+      ${tasks.length ? `<div class="list">${tasks.map(taskItem).join('')}</div>`
+        : `<p class="empty-note">今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。</p>`}
+    </section>
+    ${projectsHtml()}
+    ${goalsHtml()}
+    ${decisionsHtml()}
+    ${state.someday && state.someday.length ? `
+    <section>
+      <h2>日付なし <span class="n">${state.someday.length}件</span></h2>
+      <div class="list">${state.someday.map(taskItem).join('')}</div>
+    </section>` : ''}
+    <div class="foot">
+      <span>${esc(state.fetchedAt)} 時点</span>
+      <span><button class="link" data-act="reload">更新</button>　<button class="link" data-act="settings">設定</button></span>
+    </div>`;
+}
+
+function errBox(e){
+  const m = String(e.message || e);
+  const msg = m === 'unauthorized' ? '合言葉が一致しません。設定を確認してください。'
+    : m === 'not_configured' ? '接続先が未設定です。'
+    : /Failed to fetch|NetworkError|Load failed/.test(m) ? '通信できませんでした。前回読み込んだ内容を表示しています。'
+    : 'エラー：' + m;
+  return `<div class="err" role="alert">${esc(msg)}</div>`;
+}
+
+function taskItem(t){
+  const isDone = t['状態'] === '済';
+  return `<div class="item ${isDone?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
+    <button class="check" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${isDone?'未完了に戻す':'完了にする'}：${esc(t['内容'])}">
+      <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
+    </button>
+    <div class="body">
+      <div class="title">${esc(t['内容'])}</div>
+      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>${t['メモ'] ? '　' + esc(t['メモ']) : ''}</div>
+    </div>
+  </div>`;
+}
+
+function carryItem(t){
+  return `<div class="item" style="--c:var(${bizVar(t['事業'])})">
+    <div class="body">
+      <div class="title">${esc(t['内容'])}</div>
+      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${esc(String(t['日付']).slice(5).replace('-','/'))}の分</div>
+    </div>
+    <div class="acts">
+      <button class="btn-s keep" data-act="keep" data-id="${esc(t.ID)}">今日やる</button>
+      <button class="btn-s drop" data-act="drop" data-id="${esc(t.ID)}">やめる</button>
+    </div>
+  </div>`;
+}
+
+function projectsHtml(){
+  const ps = state.projects || [];
+  const groups = BIZ.map(b => ({b, items: ps.filter(p => p['事業'] === b.name)}))
+    .concat([{b:{name:'事業未設定', v:'--b-self'}, items: ps.filter(p => bizOrder(p['事業']) === 99)}])
+    .filter(g => g.items.length);
+  const today = state.today;
+  return `<section>
+    <h2>プロジェクト <span class="n">${ps.length}件</span></h2>
+    ${ps.length ? groups.map(g => `
+      <div class="biz-head" style="--c:var(${g.b.v})">${esc(g.b.name)}</div>
+      <div class="list">${g.items.map(p => {
+        const over = p['期限'] && p['期限'] < today;
+        return `<div class="item proj" style="--c:var(${g.b.v})"><div class="body">
+          <div class="title">${esc(p['名前'])}${p['状態']==='待ち' ? '<span class="chip wait">待ち</span>' : ''}</div>
+          ${p['次の一手'] ? `<div class="next">${esc(p['次の一手'])}</div>` : ''}
+          ${p['期限'] ? `<div class="meta ${over?'due-over':''}">期限 ${esc(p['期限'].slice(5).replace('-','/'))}${over?'（過ぎています）':''}</div>` : ''}
+        </div></div>`;
+      }).join('')}</div>`).join('')
+    : `<p class="empty-note">進行中のプロジェクトはありません。</p>`}
+  </section>`;
+}
+
+function goalsHtml(){
+  const gs = state.goals || [];
+  const block = (kind) => {
+    const list = gs.filter(g => g['種類'] === kind)
+      .sort((a,b) => bizOrder(a['事業']) - bizOrder(b['事業']));
+    return `<div class="goal-block"><h3>${kind === '自分' ? '自分の目標' : '事業の目標'}</h3>
+      ${list.length ? list.map(g => `<div class="goal"${g['事業'] ? ` style="--c:var(${bizVar(g['事業'])})"` : ''}>
+        ${g['事業'] ? `<div class="gbiz">${esc(g['事業'])}</div>` : ''}
+        <div class="gt">${esc(g['内容'])}</div>
+        <dl>
+          ${g['期間'] ? `<dt>期間</dt><dd>${esc(g['期間'])}</dd>` : ''}
+          ${g['指標'] ? `<dt>指標</dt><dd>${esc(g['指標'])}</dd>` : ''}
+          ${g['現状'] ? `<dt>現状</dt><dd>${esc(g['現状'])}</dd>` : ''}
+        </dl></div>`).join('')
+      : `<div class="meta">まだ書かれていません。</div>`}
+    </div>`;
+  };
+  return `<section><h2>目標</h2><div class="goals">${block('自分')}${block('事業')}</div></section>`;
+}
+
+function decisionsHtml(){
+  const ds = state.decisions || [];
+  if (!ds.length) return '';
+  const item = d => {
+    const proj = d['プロジェクト名'] || d['プロジェクトID'];
+    const url = /^https:\/\//.test(d['チャットURL']) ? d['チャットURL'] : '';
+    return `<div class="item dec ${d['状態']==='撤回'?'is-void':''}" style="--c:var(${bizVar(projBiz(d['プロジェクトID']))})"><div class="body">
+      <div class="title">${esc(d['内容'])}${d['状態'] ? `<span class="chip st-${esc(d['状態'])}">${esc(d['状態'])}</span>` : ''}</div>
+      ${d['理由・却下案'] ? `<div class="why">${esc(d['理由・却下案'])}</div>` : ''}
+      <div class="meta">${esc(String(d['日時']).slice(5).replace('-','/'))}${proj ? '　' + esc(proj) : ''}${url ? `　<a href="${esc(url)}" target="_blank" rel="noopener">チャット</a>` : ''}</div>
+    </div></div>`;
+  };
+  const head = ds.slice(0, 5), rest = ds.slice(5);
+  return `<section>
+    <h2>決定ログ <span class="n">新しい順</span></h2>
+    <div class="list">${head.map(item).join('')}</div>
+    ${rest.length ? `<details class="more"><summary>さらに${rest.length}件</summary><div class="list">${rest.map(item).join('')}</div></details>` : ''}
+  </section>`;
+}
+const projBiz = id => ((state.projects || []).find(p => p.ID === id) || {})['事業'];
+
+/* ---------- 操作 ---------- */
+function findTask(id){
+  return [...state.tasks, ...state.carry, ...(state.someday||[])].find(t => t.ID === id);
+}
+
+async function act(fnLocal, call, okMsg){
+  const backup = JSON.parse(JSON.stringify(state));
+  fnLocal(); render();
+  try { await call(); store.set('board.cache', state); if (okMsg) toast(okMsg); }
+  catch(e){ state = backup; render(); toast('保存できませんでした：' + (e.message || e)); }
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const id = b.dataset.id;
+  switch (b.dataset.act){
+    case 'toggle': {
+      const t = findTask(id); if (!t) return;
+      const next = t['状態'] === '済' ? '未' : '済';
+      act(() => { t['状態'] = next; }, () => api('status', {id, status: next}));
+      break;
+    }
+    case 'keep': {
+      act(() => {
+        const t = state.carry.find(x => x.ID === id);
+        state.carry = state.carry.filter(x => x.ID !== id);
+        t['日付'] = state.today; t['状態'] = '未'; state.tasks.push(t);
+      }, () => api('keep', {id}), '今日に移しました');
+      break;
+    }
+    case 'drop': {
+      act(() => { state.carry = state.carry.filter(x => x.ID !== id); },
+        () => api('status', {id, status:'捨'}), 'やめにしました');
+      break;
+    }
+    case 'reload': load(); toast('更新しています'); break;
+    case 'settings': openSettings(); break;
+  }
+});
+
+/* 追加 */
+$('#bizPick').innerHTML = BIZ.map((b,i) => `<label style="--c:var(${b.v})"><input type="radio" name="biz" value="${esc(b.name)}" ${i===0?'checked':''}><span>${esc(b.name)}</span></label>`).join('');
+$('#fab').addEventListener('click', () => {
+  if (!cfg.url){ openSettings(); return; }
+  $('#addForm').reset(); $('#addDlg').showModal();
+});
+$('#addDlg').addEventListener('close', async () => {
+  if ($('#addDlg').returnValue !== 'ok') return;
+  const fd = new FormData($('#addForm'));
+  const text = String(fd.get('text') || '').trim(); const biz = fd.get('biz');
+  if (!text) return;
+  const tmp = {ID:'tmp'+Date.now(), '日付':state.today, '内容':text, '事業':biz, '状態':'未', 'メモ':''};
+  act(() => { state.tasks.push(tmp); }, async () => { const r = await api('add', {text, biz}); tmp.ID = r.id; }, '追加しました');
+});
+
+/* 設定 */
+function openSettings(){
+  const f = $('#setForm'); f.url.value = cfg.url || ''; f.key.value = cfg.key || '';
+  $('#setDlg').showModal();
+}
+$('#setDlg').addEventListener('close', () => {
+  if ($('#setDlg').returnValue !== 'ok') return;
+  const f = $('#setForm');
+  cfg = {url: f.url.value.trim(), key: f.key.value.trim()};
+  store.set('board.cfg', cfg); state = null; store.set('board.cache', null);
+  render(); load();
+});
+
+/* 戻ってきた時に自動更新 */
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cfg.url) load(); });
+
+/* ---------- 見本データ（URLに demo） ---------- */
+let demo = null;
+function demoApi(action, p){
+  const ymd = dt => new Date(dt.getTime() + 9*3600e3).toISOString().slice(0,10);
+  const today = ymd(new Date()), yest = ymd(new Date(Date.now() - 864e5));
+  if (!demo) demo = {
+    tasks:[
+      {ID:'T1','日付':today,'内容':'週末イベントのスタッフ名簿を送る','事業':'ギガネット（通信）','状態':'未','メモ':''},
+      {ID:'T2','日付':today,'内容':'交通費申請の未提出者にリマインド','事業':'ギガネット（通信）','状態':'済','メモ':''},
+      {ID:'T3','日付':today,'内容':'新商品の箱 修正版を確認に出す','事業':'円山製麺','状態':'未','メモ':''},
+      {ID:'T4','日付':today,'内容':'ラベル 賞味期限の更新','事業':'円山製麺','状態':'済','メモ':''},
+      {ID:'T5','日付':today,'内容':'メニューPOPの英語表記を確認','事業':'SHEEP GANG','状態':'未','メモ':''},
+      {ID:'T6','日付':today,'内容':'ボードのGASをデプロイ','事業':'個人','状態':'未','メモ':''},
+    ],
+    carry:[{ID:'T0','日付':yest,'内容':'インスタ ストーリー投稿','事業':'円山製麺','状態':'未','メモ':''}],
+    someday:[],
+    projects:[
+      {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':ymd(new Date(Date.now()+12*864e5))},
+      {ID:'P2','名前':'年末年始 東海イベント','事業':'ギガネット（通信）','状態':'待ち','次の一手':'先方から詳細が来るのを待つ','期限':''},
+      {ID:'P3','名前':'新商品パッケージ','事業':'円山製麺','状態':'進行中','次の一手':'箱の入稿データ作成','期限':ymd(new Date(Date.now()-864e5))},
+      {ID:'P4','名前':'メニュー多言語化','事業':'SHEEP GANG','状態':'進行中','次の一手':'翻訳の確認','期限':''},
+      {ID:'P5','名前':'社内ToDoアプリ','事業':'エルダイブ','状態':'待ち','次の一手':'3人で公開範囲を決める','期限':''},
+    ],
+    goals:[
+      {ID:'G1','種類':'自分','期間':'月','内容':'週報を記録から自動で作れる状態にする','指標':'週報作成 1時間以内','現状':'ボード運用開始'},
+      {ID:'G2','種類':'事業','期間':'週','内容':'店舗 1週間の売上目標を達成','指標':'週の売上','現状':'','事業':'円山製麺'},
+    ],
+    decisions:[
+      {'日時':today+' 11:20','プロジェクトID':'P3','プロジェクト名':'新商品パッケージ','内容':'説明書は箱と別紙にする','状態':'確定','理由・却下案':'箱に印刷すると修正のたびに版代がかかる。却下案：箱の内側に印刷','チャットURL':'https://claude.ai/'},
+      {'日時':yest+' 18:05','プロジェクトID':'P1','プロジェクト名':'ショッピングモール催事','内容':'搬入は開店前に行う','状態':'保留','理由・却下案':'先方の回答待ち','チャットURL':''},
+    ],
+  };
+  const all = () => [...demo.tasks, ...demo.carry];
+  return new Promise(r => setTimeout(r, 150)).then(() => {
+    if (action === 'data') return JSON.parse(JSON.stringify({...demo, today, fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)}));
+    if (action === 'status'){ const t = all().find(x => x.ID === p.id); if (t) t['状態'] = p.status; if (p.status==='捨') demo.carry = demo.carry.filter(x => x.ID !== p.id); return {}; }
+    if (action === 'keep'){ const t = demo.carry.find(x => x.ID === p.id); demo.carry = demo.carry.filter(x => x.ID !== p.id); t['日付']=today; demo.tasks.push(t); return {}; }
+    if (action === 'add'){ const id = 'T'+Date.now(); demo.tasks.push({ID:id,'日付':today,'内容':p.text,'事業':p.biz,'状態':'未','メモ':''}); return {id}; }
+  });
+}
+
+/* 起動 */
+render();
+if (cfg.url) load();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
