@@ -146,6 +146,14 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
+.works{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:2px 0 6px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+.works::-webkit-scrollbar{display:none}
+.wcard{flex:0 0 calc(50% - 5px);min-width:150px;scroll-snap-align:start;background:var(--surface);border-radius:14px;padding:12px 14px;border-top:4px solid var(--c)}
+.wcard h3{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--c)}
+.wcard ul{margin:0;padding:0;list-style:none}
+.wcard li{font-size:14.5px;padding:5px 0;border-top:1px solid var(--line)}
+.wcard li:first-child{border-top:0;padding-top:0}
+
 .item.ev{padding:10px 14px 10px 0}
 .item.ev::before{background:var(--line)}
 .ev-time{flex:none;width:44px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;padding-top:1px}
@@ -378,6 +386,7 @@ function render(err){
       <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
       <div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>
     </section>` : ''}
+    ${worksHtml()}
     ${projectsHtml()}
     ${goalsHtml()}
     ${decisionsHtml()}
@@ -482,6 +491,20 @@ function upcomingHtml(){
       ${eventsHtml(day)}
       ${ts.length ? `<div class="list">${ts.map(t => taskItem(t)).join('')}</div>` : ''}`;
     }).join('')}
+  </section>`;
+}
+
+// 事業を横に並べ、その下に担当している業務（スプシの「業務」タブ）
+function worksHtml(){
+  const ws = state.works || [];
+  if (!ws.length) return '';
+  const cols = BIZ.map(b => ({b, items: ws.filter(w => w['事業'] === b.name)})).filter(c => c.items.length);
+  return `<section>
+    <h2>事業と業務 <span class="n">横にスクロール</span></h2>
+    <div class="works">${cols.map(c => `<div class="wcard" style="--c:var(${c.b.v})">
+      <h3>${esc(c.b.name)}</h3>
+      <ul>${c.items.map(w => `<li>${esc(w['業務'])}</li>`).join('')}</ul>
+    </div>`).join('')}</div>
   </section>`;
 }
 
@@ -828,6 +851,16 @@ function demoApi(action, p){
       {date:day(2), start:'', end:'', title:'直売事務所'},
       {date:day(4), start:'09:30', end:'17:00', title:'イベント会場'},
     ],
+    works:[
+      {ID:'W1','事業':'ギガネット（通信）','業務':'ポスター作製','順番':'1'},
+      {ID:'W2','事業':'ギガネット（通信）','業務':'勤怠管理','順番':'2'},
+      {ID:'W3','事業':'円山製麺','業務':'物産展企画','順番':'1'},
+      {ID:'W4','事業':'円山製麺','業務':'直売所','順番':'2'},
+      {ID:'W5','事業':'SHEEP GANG','業務':'印刷物','順番':'1'},
+      {ID:'W6','事業':'SHEEP GANG','業務':'名刺','順番':'2'},
+      {ID:'W7','事業':'SHEEP GANG','業務':'ポスター','順番':'3'},
+      {ID:'W8','事業':'エルダイブ','業務':'ユナイト管理','順番':'1'},
+    ],
     recur:[
       {ID:'R1','名前':'スタッフ交通費回収','事業':'エルダイブ','周期':'毎月','開始日':'1','期限日':'1','見込み分':'30','手順':'','有効':'TRUE','メモ':''},
       {ID:'R2','名前':'直売前の印刷業務','事業':'円山製麺','周期':'直売日前日','開始日':'','期限日':'','見込み分':'','手順':'賞味期限ラベル確認・印刷\nちらし印刷','有効':'TRUE','メモ':''},
@@ -863,6 +896,7 @@ function demoApi(action, p){
         goals: demo.goals, decisions: demo.decisions,
         candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
         events: demo.events,
+        works: demo.works,
         fetchedAt: today + ' ' + new Date().toTimeString().slice(0,5)
       }));
     }
