@@ -146,6 +146,46 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .err{color:var(--danger);font-size:14px;padding:14px 16px;background:var(--surface);border-radius:14px;margin-top:16px}
 
 /* 追加分 */
+/* ---- これから7日間：1日が1行の横長（タスクの名前を横に並べる） ---- */
+.cal-rows{display:grid;gap:6px}
+.cal-row{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border-radius:12px;padding:8px 12px;min-height:46px}
+.cal-row.empty{min-height:0;padding:6px 12px}
+.cal-row .cal-h{flex:none;width:58px;display:flex;align-items:baseline;gap:4px;justify-content:flex-start;margin:2px 0 0}
+.cal-row .cal-h b{font-size:18px}
+.cal-row .cal-h small{font-size:12px}
+.cal-row.sun .cal-h b,.cal-row.sun .cal-h small{color:var(--danger)}
+.cal-row.sat .cal-h b,.cal-row.sat .cal-h small{color:var(--b-giga)}
+.cal-row .cal-h .mo{font-size:11px;color:var(--sub);font-weight:400;margin-right:1px}
+.cal-items{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
+.cal-items .cal-task{margin-top:0;max-width:100%}
+.cal-items .cal-ev{margin-top:0;max-width:100%}
+.cal-items .cal-title{font-size:13px;flex:0 1 auto}
+.cal-items .cal-ev{font-size:13px}
+.cal-none{font-size:12.5px;color:var(--sub);padding-top:3px}
+
+/* ---- 入力欄：日付などが重ならないようにする（iPad・iPhone） ---- */
+dialog .field input,dialog .field select,dialog .field textarea{min-width:0;max-width:100%;box-sizing:border-box}
+dialog .field input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-height:46px;text-align:left}
+dialog .field-row{align-items:flex-end}
+dialog .field-row .field{flex:1 1 140px;min-width:0}
+dialog .field-row .field.narrow{flex:0 0 100px}
+dialog .chk{flex:0 0 auto}
+/* ---- サブタスク ---- */
+.sub-chip{display:inline-block;font-size:11.5px;padding:0 7px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--sub)}
+.sub-list{display:grid;gap:2px;margin:0 0 14px}
+.sub-item{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;background:var(--bg);border:0;border-radius:10px;padding:10px 12px;font:inherit;color:inherit;cursor:pointer}
+.sub-chk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--sub);margin-top:1px;display:grid;place-items:center}
+.sub-item.is-done .sub-chk{background:var(--accent);border-color:var(--accent)}
+.sub-item.is-done .sub-chk::after{content:"";width:6px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.sub-item.is-done .sub-text{color:var(--sub);text-decoration:line-through}
+.sub-text{flex:1;min-width:0;word-break:break-word;line-height:1.5}
+
+/* ---- タスクの中身（読むだけの表示） ---- */
+.tv-text{font-size:17px;line-height:1.65;white-space:pre-wrap;margin:0 0 14px;word-break:break-word}
+.tv-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:0}
+.tv-dl dt{color:var(--sub)}
+.tv-dl dd{margin:0;white-space:pre-wrap;word-break:break-word}
+
 /* ---- 完了したタスク：各欄の右下に「完了 N件」。押すと開く ---- */
 .done-wrap{margin-top:8px}
 .done-box>summary{display:block;width:max-content;margin-left:auto;list-style:none;cursor:pointer;font-size:13px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:4px 14px;background:var(--surface)}
@@ -185,7 +225,7 @@ dialog::backdrop{background:rgba(10,16,24,.45)}
 .m-cell.today .m-d{background:var(--accent);color:#fff}
 .m-full{display:none}
 .m-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
-.m-t{font-size:11px;line-height:1.3;padding:1px 4px;margin-top:2px;border-left:3px solid var(--c);background:var(--surface);border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.m-t{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;width:100%;text-align:left;font:inherit;font-size:11px;line-height:1.3;color:inherit;padding:2px 4px;margin-top:2px;border:0;border-left:3px solid var(--c);background:var(--surface);border-radius:4px;cursor:pointer;word-break:break-all}
 .m-t.is-done{color:var(--sub);text-decoration:line-through}
 .m-ev{font-size:10.5px;line-height:1.3;padding:1px 4px;margin-top:2px;color:var(--sub);border-left:3px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m-more{font-size:10.5px;color:var(--sub);margin-top:2px}
@@ -331,12 +371,25 @@ dialog{max-height:92vh;overflow:auto}
       <label class="field narrow"><span>見込み分</span><input type="number" name="見込み分" inputmode="numeric" min="0" step="5"></label>
     </div>
     <label class="field"><span>メモ</span><textarea name="メモ" class="short"></textarea></label>
+    <label class="field"><span>サブタスク（1行に1つ。完了した行は頭に ✓ ）</span><textarea name="サブタスク"></textarea></label>
     <div class="row-btns">
       <button class="btn sec left" value="tomorrow" id="btnTomorrow" formnovalidate>明日へ</button>
       <button class="btn sec" value="cancel" formnovalidate>やめる</button>
       <button class="btn pri" value="ok">保存する</button>
     </div>
   </form>
+</dialog>
+
+<!-- タスクの中身（一覧では一言にまとめてあるので、ここで全文を見る） -->
+<dialog id="taskView">
+  <div class="sheet">
+    <h3 id="tvTitle">タスクの内容</h3>
+    <div id="tvBody"></div>
+    <div class="row-btns">
+      <button class="btn sec" id="tvClose">閉じる</button>
+      <button class="btn pri" id="tvEdit">編集</button>
+    </div>
+  </div>
 </dialog>
 
 <!-- 月カレンダー：全部の月のタスクと予定を簡易表示 -->
@@ -426,14 +479,21 @@ const WD = ['日','月','火','水','木','金','土'];
 const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
 const md = ymd => { const d = new Date(ymd + 'T00:00:00Z'); return `${d.getUTCMonth()+1}/${d.getUTCDate()}（${WD[d.getUTCDay()]}）`; };
 const mdShort = ymd => String(ymd).slice(5).replace('-','/');
-// 内容をひとことに縮める（カッコの中と、最初の読点までで切って、長ければ省略）
-function short(text, n = 13){
+// 内容をひとことに縮める（カッコの中を省き、最初の読点までで切って、長ければ省略）
+function short(text, n = 20){
   let t = String(text || '').replace(/[（(][^）)]*[）)]/g, '').replace(/\s+/g, ' ').trim();
   const head = t.split(/[、。，,]/)[0].trim();
-  if (head.length >= 6) t = head;   // 切った結果が短すぎる（「近藤さんに」など）ときは、全体を使う
+  if (head.length >= 8) t = head;   // 切った結果が短すぎる（「近藤さんに」など）ときは、全体を使う
   if (!t) t = String(text || '');
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
+// サブタスク：1行に1つ。完了した行は頭に「✓ 」（行の番号は元のまま）
+function subsOf(t){
+  return String(t['サブタスク'] || '').split(/\r?\n/).map((line, i) => ({i, line})).filter(x => x.line.trim())
+    .map(x => ({i: x.i, done: /^✓\s/.test(x.line), text: x.line.replace(/^✓\s+/, '').trim()}));
+}
+// 一覧に出す一言：Claudeが書いた「要約」があればそれ。なければ内容から自動で縮める（約20字）
+const sum = t => String(t['要約'] || '').trim() || short(t['内容'], 20);
 
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -494,6 +554,7 @@ function render(err){
   $('#stamp').textContent = state && state.fetchedAt ? String(state.fetchedAt).slice(11) + ' 時点' : '';
   if ($('#bizView').open) fillBiz();
   if ($('#monthDlg').open) fillMonth();
+  if ($('#taskView').open && viewTask){ const fresh = findTask(viewTask.ID); if (fresh) viewTask = fresh; renderView(); }
 }
 function renderMain(err){
   const app = $('#app');
@@ -586,19 +647,21 @@ function errBox(e){
 function taskItem(t, opt = {}){
   const isDone = t['状態'] === '済';
   const st = t['状態'] === '待ち' || t['状態'] === '保留' ? `<span class="chip wait">${esc(t['状態'])}</span>` : '';
+  const subs = subsOf(t);
   const meta = [
     `<span class="biz">${esc(t['事業'] || '事業未設定')}</span>`,
+    subs.length ? `<span class="sub-chip">サブ ${subs.filter(x => x.done).length}/${subs.length}</span>` : '',
     opt.showDate && t['日付'] ? esc(mdShort(t['日付'])) : '',
     t['期限'] ? `<span class="${t['期限'] < state.today && !isDone ? 'due-over' : ''}">期限 ${esc(mdShort(t['期限']))}</span>` : '',
-    t['見込み分'] ? esc(t['見込み分']) + '分' : '',
-    t['メモ'] ? esc(t['メモ']) : '',
+    !opt.brief && t['見込み分'] ? esc(t['見込み分']) + '分' : '',
+    !opt.brief && t['メモ'] ? esc(t['メモ']) : '',
   ].filter(Boolean).join('　');
   return `<div class="item ${isDone?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
     <button class="check" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${isDone?'未完了に戻す':'完了にする'}：${esc(t['内容'])}">
       <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
     </button>
-    <button class="body tap" data-act="edit" data-id="${esc(t.ID)}">
-      <div class="title">${esc(t['内容'])}${st}</div>
+    <button class="body tap" data-act="${opt.view || subs.length ? 'view' : 'edit'}" data-id="${esc(t.ID)}">
+      <div class="title">${esc(opt.brief ? sum(t) : t['内容'])}${st}</div>
       <div class="meta">${meta}</div>
     </button>
   </div>`;
@@ -648,7 +711,7 @@ function calTask(t){
   const done = t['状態'] === '済', wait = t['状態'] === '待ち' || t['状態'] === '保留';
   return `<div class="cal-task ${done?'is-done':''}" style="--c:var(${bizVar(t['事業'])})">
     <button class="cal-chk" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${done?'未完了に戻す':'完了にする'}：${esc(t['内容'])}"></button>
-    <button class="tap cal-title" data-act="edit" data-id="${esc(t.ID)}">${esc(short(t['内容']))}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
+    <button class="tap cal-title" data-act="view" data-id="${esc(t.ID)}">${esc(sum(t))}${wait ? `<span class="chip wait">${esc(t['状態'])}</span>` : ''}</button>
   </div>`;
 }
 // 完了したタスク（各欄の右下の「完了 N件」）
@@ -673,7 +736,7 @@ function doneBox(kind){
   if (!list.length) return '';
   return `<div class="done-wrap"><details class="done-box" data-kind="${kind}" ${doneOpen[kind] ? 'open' : ''}>
     <summary>完了 ${list.length}件</summary>
-    <div class="list">${list.map(t => taskItem(t, {showDate: kind !== 'today'})).join('')}</div>
+    <div class="list">${list.map(t => taskItem(t, {showDate: kind !== 'today', brief: kind === 'upcoming', view: kind === 'upcoming'})).join('')}</div>
   </details></div>`;
 }
 document.addEventListener('toggle', e => {
@@ -684,32 +747,20 @@ document.addEventListener('toggle', e => {
 function upcomingHtml(){
   const ups = (state.upcoming || []).filter(t => t['状態'] !== '済');
   const days = Array.from({length: 7}, (_, i) => addDays(state.today, i + 1));
-  const has = d => ups.some(t => t['日付'] === d) || eventsOn(d).length > 0;
-  const sel = calSel && days.includes(calSel) ? calSel : (days.find(has) || days[0]);
-  const cells = days.map(day => {
+  const rows = days.map((day, n) => {
     const ts = ups.filter(t => t['日付'] === day), es = eventsOn(day);
     const wd = new Date(day + 'T00:00:00Z').getUTCDay();
-    const dots = es.map(() => '<i class="dot ev"></i>').join('')
-      + ts.map(t => `<i class="dot" style="--c:var(${bizVar(t['事業'])})"></i>`).join('');
-    return `<div class="cal-day ${wd===0?'sun':wd===6?'sat':''} ${day===sel?'sel':''}" data-act="calday" data-day="${day}">
-      <div class="cal-h"><b>${+day.slice(8)}</b><small>${WD[wd]}</small></div>
-      <div class="cell-dots">${dots}</div>
-      <div class="cell-full">
-        ${es.map(e => `<div class="cal-ev"><span>${e.start ? esc(e.start) : '終日'}</span>${esc(e.title)}</div>`).join('')}
-        ${ts.map(calTask).join('')}
-      </div>
+    const label = (n === 0 || +day.slice(8) === 1 ? `<span class="mo">${+day.slice(5, 7)}/</span>` : '') + +day.slice(8);
+    const items = es.map(e => `<div class="cal-ev"><span>${e.start ? esc(e.start) : '終日'}</span>${esc(e.title)}</div>`).join('')
+      + ts.map(calTask).join('');
+    return `<div class="cal-row ${wd === 0 ? 'sun' : wd === 6 ? 'sat' : ''} ${items ? '' : 'empty'}">
+      <div class="cal-h"><b>${label}</b><small>${WD[wd]}</small></div>
+      <div class="cal-items">${items || '<span class="cal-none">予定・タスクなし</span>'}</div>
     </div>`;
   }).join('');
-  const dts = ups.filter(t => t['日付'] === sel);
   return `<section id="cal">
     <h2>これから <span class="n">7日間・タスク${ups.length}件</span><button class="link h-act" data-act="month">月カレンダー</button></h2>
-    <div class="cal">${cells}</div>
-    <div class="cal-detail">
-      <div class="day-head">${esc(md(sel))}</div>
-      ${eventsHtml(sel)}
-      ${dts.length ? `<div class="list">${dts.map(t => taskItem(t)).join('')}</div>`
-        : (eventsOn(sel).length ? '' : '<p class="empty-note">この日の予定・タスクはありません。</p>')}
-    </div>
+    <div class="cal-rows">${rows}</div>
     ${doneBox('upcoming')}
   </section>`;
 }
@@ -829,9 +880,21 @@ document.addEventListener('click', e => {
       break;
     }
     case 'edit': { const t = findTask(id); if (t) openTask({mode:'edit', task:t}); break; }
+    case 'view': openView(id); break;
+    case 'sub': {
+      const idx = +b.dataset.i;
+      const copies = allTasks().filter(x => x.ID === id);
+      const flip = () => copies.forEach(x => {
+        const lines = String(x['サブタスク'] || '').split(/\r?\n/);
+        if (idx < lines.length) lines[idx] = /^✓\s/.test(lines[idx]) ? lines[idx].replace(/^✓\s+/, '') : '✓ ' + lines[idx];
+        x['サブタスク'] = lines.join('\n');
+      });
+      flip(); render();
+      api('sub', {id, index: idx}).catch(e => { flip(); render(); toast('保存できませんでした：' + (e.message || e)); });
+      break;
+    }
     case 'bizview': openBiz(b.dataset.biz); break;
     case 'pedit': { const pr = (state.projects || []).find(x => x.ID === id); if (pr) openProj(pr); break; }
-    case 'calday': calSel = b.dataset.day; $('#cal').outerHTML = upcomingHtml(); break;
     case 'cand-take': {
       const c = (state.candidates || []).find(x => x['行ID'] === id); if (!c) return;
       openTask({mode:'cand', task:{'内容': String(c['原文']).replace(/^\[[^\]]*\]\s*/, ''), '日付': state.today}, inboxId:id});
@@ -889,6 +952,7 @@ function openTask(ctx){
   f['期限'].value = t['期限'] || '';
   f['見込み分'].value = t['見込み分'] || '';
   f['メモ'].value = ctx.mode === 'edit' ? (t['メモ'] || '') : '';
+  f['サブタスク'].value = ctx.mode === 'edit' ? (t['サブタスク'] || '') : '';
   $('#taskDlg').showModal();
 }
 $('#taskForm').nodate.addEventListener('change', e => {
@@ -908,6 +972,7 @@ function taskFields(){
     '期限': f['期限'].value,
     '見込み分': f['見込み分'].value,
     'メモ': String(fd.get('メモ') || '').trim(),
+    'サブタスク': String(fd.get('サブタスク') || '').trim(),
   };
 }
 
@@ -925,14 +990,43 @@ onDialog('#taskDlg', rv => {
   if (ctx.mode === 'edit'){
     // 変わった列だけ送る
     const diff = {};
-    Object.keys(fields).forEach(k => { if (String(ctx.task[k] ?? '') !== fields[k]) diff[k] = fields[k]; });
+    Object.keys(fields).forEach(k => { if (String(ctx.task[k] ?? '').trim() !== String(fields[k]).trim()) diff[k] = fields[k]; });
     if (!Object.keys(diff).length) return;
     save(() => api('update', {id:ctx.task.ID, fields:diff}), '保存しました');
   } else {
     if (!fields['メモ']) delete fields['メモ'];
+    if (!fields['サブタスク']) delete fields['サブタスク'];
     save(() => api('add', {fields, inboxId: ctx.inboxId || ''}), '追加しました');
   }
 });
+
+/* ---------- タスクの中身（読むだけ。編集はここから） ---------- */
+let viewTask = null;
+function openView(id){
+  const t = findTask(id); if (!t) return;
+  viewTask = t;
+  renderView();
+  if (!$('#taskView').open) $('#taskView').showModal();
+}
+function renderView(){
+  const t = viewTask; if (!t) return;
+  const subs = subsOf(t);
+  const pj = (state.projects || []).find(x => x.ID === t['プロジェクトID']);
+  const rows = [
+    ['日付', t['日付'] ? md(t['日付']) : '日付なし'],
+    ['事業', t['事業'] || '事業未設定'],
+    ['プロジェクト', pj ? pj['名前'] : ''],
+    ['状態', t['状態'] || '未'],
+    ['期限', t['期限'] ? md(t['期限']) : ''],
+    ['見込み', t['見込み分'] ? t['見込み分'] + '分' : ''],
+    ['メモ', t['メモ'] || ''],
+  ].filter(r => r[1]);
+  $('#tvBody').innerHTML = `<p class="tv-text">${esc(t['内容'])}</p>
+    ${subs.length ? `<div class="sub-list">${subs.map(x => `<button class="sub-item ${x.done ? 'is-done' : ''}" data-act="sub" data-id="${esc(t.ID)}" data-i="${x.i}"><span class="sub-chk"></span><span class="sub-text">${esc(x.text)}</span></button>`).join('')}</div>` : ''}
+    <dl class="tv-dl">${rows.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl>`;
+}
+$('#tvClose').addEventListener('click', () => $('#taskView').close());
+$('#tvEdit').addEventListener('click', () => { $('#taskView').close(); if (viewTask) openTask({mode:'edit', task:viewTask}); });
 
 /* ---------- サイトの更新（ボタン・引き下げ） ---------- */
 function refreshSite(){
@@ -1005,7 +1099,7 @@ function fillMonth(){
       <div class="m-d">${+day.slice(8)}</div>
       <div class="m-full">
         ${es.slice(0, 2).map(e => `<div class="m-ev">${esc(e.title)}</div>`).join('')}
-        ${ts.slice(0, 3).map(t => `<div class="m-t ${t['状態']==='済' ? 'is-done' : ''}" style="--c:var(${bizVar(t['事業'])})">${esc(short(t['内容'], 10))}</div>`).join('')}
+        ${ts.slice(0, 3).map(t => `<button class="m-t ${t['状態']==='済' ? 'is-done' : ''}" data-act="view" data-id="${esc(t.ID)}" style="--c:var(${bizVar(t['事業'])})">${esc(sum(t))}</button>`).join('')}
         ${ts.length > 3 ? `<div class="m-more">ほか${ts.length - 3}件</div>` : ''}
       </div>
       <div class="m-dots">${dots}</div>
@@ -1017,7 +1111,7 @@ function fillMonth(){
   $('#mDetail').innerHTML = mSel ? `
     <div class="day-head">${esc(md(mSel))}</div>
     ${evListHtml(des)}
-    ${dts.length ? `<div class="list">${dts.map(t => taskItem(t)).join('')}</div>`
+    ${dts.length ? `<div class="list">${dts.map(t => taskItem(t, {brief:true, view:true})).join('')}</div>`
       : (des.length ? '' : '<p class="empty-note">この日のタスクと予定はありません。</p>')}
     <div class="row-btns" style="margin-top:10px"><button class="btn sec" data-act="madd" data-day="${mSel}">＋ この日にタスクを足す</button></div>` : '';
 }
@@ -1150,7 +1244,7 @@ function demoApi(action, p){
   const today = ymd(new Date()), day = n => addDays(today, n);
   if (!demo) demo = {
     tasks:[
-      {ID:'T1','日付':today,'内容':'週末イベントのスタッフ名簿を送る','事業':'ギガネット（通信）','状態':'未','メモ':'','期限':'','見込み分':'15'},
+      {ID:'T1','日付':today,'内容':'週末イベントのスタッフ名簿を送る','事業':'ギガネット（通信）','状態':'未','メモ':'','期限':'','見込み分':'15','サブタスク':'名簿を作る\n✓ 人数を確認する\n担当者に送る'},
       {ID:'T2','日付':today,'内容':'交通費申請の未提出者にリマインド','事業':'ギガネット（通信）','状態':'済','メモ':''},
       {ID:'T3','日付':today,'内容':'新商品の箱 修正版を確認に出す','事業':'円山製麺','状態':'未','メモ':'','プロジェクトID':'P3'},
       {ID:'T5','日付':today,'内容':'メニューPOPの英語表記を確認','事業':'SHEEP GANG','状態':'未','メモ':''},
