@@ -251,7 +251,22 @@ button.m-t{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
 .tl-now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--danger);z-index:1}
 .tl-ax{position:relative;height:14px;font-size:10.5px;color:var(--sub)}
 .tl-ax span{position:absolute;transform:translateX(-50%)}
-.tl-info{font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.5}
+.tl-bar i.tent{background:transparent;border:2px dashed var(--c);opacity:1;box-sizing:border-box}
+.sched{margin-top:10px}
+.sched summary{font-size:14px;font-weight:700;cursor:pointer;padding:4px 0}
+.sched summary .n{font-weight:400;color:var(--sub);font-size:12px;margin-left:6px}
+.sc-list{display:grid;gap:6px;margin-top:6px}
+.sc{display:flex;gap:10px;align-items:center;border-radius:10px;padding:8px 12px;text-align:left;font:inherit;width:100%;min-height:40px}
+.sc-t{flex:none;font-variant-numeric:tabular-nums;font-size:13px;min-width:94px}
+.sc-n{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}
+.sc-tag{flex:none;font-size:11px;border-radius:999px;padding:2px 8px}
+.sc-ev{background:var(--accent);color:#fff}
+.sc-ev .sc-tag{background:rgba(255,255,255,.25)}
+.sc-task{background:transparent;border:2px dashed var(--c);color:var(--ink);cursor:pointer}
+.sc-task .sc-tag{background:var(--surface);color:var(--sub)}
+.sc-task.over{opacity:.6}
+.sc-all,.sc-warn{font-size:12.5px;color:var(--sub);margin-top:6px}
+.sc-warn{color:var(--danger)}
 @media (min-width:700px){
   #app{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;
     grid-template-areas:"works" "head" "cal" "carry" "r2" "r3" "foot"}
@@ -640,26 +655,55 @@ function renderMain(err){
     </div>`;
 }
 
-// 今日のざっくり時間割：6時〜22時の帯に、カレンダーの予定を置く
+// 今日の仮の時間割：カレンダーの予定は固定、今日やることを空き時間に順に詰める（画面の中だけ。カレンダーには書かない）
+const WORK_START = 10 * 60, WORK_END = 19 * 60, DEFAULT_MIN = 30;
+const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const toMin = x => { const m = /^(\d+):(\d+)/.exec(x || ''); return m ? +m[1] * 60 + +m[2] : null; };
+function buildSchedule(openT){
+  const evs = eventsOn(state.today);
+  const fixed = evs.filter(e => e.start).map(e => {
+    const a = toMin(e.start); let z = e.end ? toMin(e.end) : a + 60; if (z <= a) z = a + 60;
+    return {kind:'ev', title:e.title, a, z};
+  }).sort((x, y) => x.a - y.a);
+  const allday = evs.filter(e => !e.start).map(e => e.title);
+  const j = new Date(Date.now() + 9 * 3600e3);
+  const isToday = j.toISOString().slice(0, 10) === state.today;
+  let cur = WORK_START;
+  if (isToday) cur = Math.max(cur, Math.ceil((j.getUTCHours() * 60 + j.getUTCMinutes()) / 15) * 15);
+  const order = [...openT].sort((x, y) => (x['期限'] || '9999') < (y['期限'] || '9999') ? -1 : (x['期限'] || '9999') > (y['期限'] || '9999') ? 1 : bizOrder(x['事業']) - bizOrder(y['事業']));
+  const placed = [];
+  order.forEach(t => {
+    const dur = Math.max(5, +t['見込み分'] || DEFAULT_MIN);
+    let moved = true;
+    while (moved){ moved = false;
+      for (const f of fixed){ if (cur < f.z && cur + dur > f.a){ cur = f.z; moved = true; } }
+    }
+    placed.push({kind:'task', t, title: sum(t), a: cur, z: cur + dur, est: !t['見込み分'], over: cur + dur > WORK_END});
+    cur += dur;
+  });
+  const items = [...fixed, ...placed].sort((x, y) => x.a - y.a);
+  const over = placed.filter(x => x.over).length;
+  const lastEnd = placed.length ? placed[placed.length - 1].z : cur;
+  return {items, allday, over, lastEnd, total: placed.reduce((n, x) => n + x.z - x.a, 0)};
+}
 function timelineHtml(openT){
-  const H0 = 6, H1 = 22, toH = hm => { const m = /^(\d+):(\d+)/.exec(hm || ''); return m ? +m[1] + +m[2] / 60 : null; };
-  const evs = eventsOn(state.today), timed = evs.filter(e => e.start), allday = evs.filter(e => !e.start);
-  const pos = h => Math.max(0, Math.min(100, (h - H0) / (H1 - H0) * 100));
-  const blocks = timed.map(e => {
-    const a = toH(e.start), z = e.end ? toH(e.end) : a + 1;
-    return `<i style="left:${pos(a)}%;width:${Math.max(pos(z) - pos(a), 1.2)}%" title="${esc(e.start)} ${esc(e.title)}"></i>`;
-  }).join('');
-  const ticks = [6, 9, 12, 15, 18, 21].map(h => `<b style="left:${pos(h)}%"></b>`).join('');
-  const labels = [6, 9, 12, 15, 18, 21].map(h => `<span style="left:${pos(h)}%">${h}</span>`).join('');
-  const nowH = new Date(Date.now() + 9 * 3600e3).getUTCHours() + new Date().getMinutes() / 60;
-  const now = nowH >= H0 && nowH <= H1 ? `<div class="tl-now" style="left:${pos(nowH)}%"></div>` : '';
-  const mins = openT.reduce((n, t) => n + (+t['見込み分'] || 0), 0);
-  const info = [
-    ...allday.map(e => '終日 ' + esc(e.title)),
-    ...timed.map(e => esc(e.start) + ' ' + esc(e.title)),
-    `未完了タスク ${openT.length}件` + (mins ? `（見込み約${mins >= 60 ? Math.round(mins / 6) / 10 + '時間' : mins + '分'}）` : ''),
-  ].join('　／　');
-  return `<div class="tl"><div class="tl-bar">${ticks}${blocks}${now}</div><div class="tl-ax">${labels}</div><div class="tl-info">${info}</div></div>`;
+  const S = buildSchedule(openT);
+  const lo = Math.min(WORK_START, ...S.items.map(x => x.a)), hi = Math.max(WORK_END, ...S.items.filter(x => x.kind === 'ev').map(x => x.z));
+  const H0 = Math.floor(lo / 60), H1 = Math.min(24, Math.ceil(hi / 60));
+  const pos = m => Math.max(0, Math.min(100, (m / 60 - H0) / (H1 - H0) * 100));
+  const bar = S.items.map(x => `<i class="${x.kind === 'task' ? 'tent' : ''}" style="left:${pos(x.a)}%;width:${Math.max(pos(x.z) - pos(x.a), 1)}%;${x.kind === 'task' ? `--c:var(${bizVar(x.t['事業'])})` : ''}"></i>`).join('');
+  const hrs = []; for (let h = H0; h <= H1; h += (H1 - H0 > 10 ? 3 : 2)) hrs.push(h);
+  const ticks = hrs.map(h => `<b style="left:${pos(h * 60)}%"></b>`).join('');
+  const labels = hrs.map(h => `<span style="left:${pos(h * 60)}%">${h}</span>`).join('');
+  const rows = S.items.map(x => x.kind === 'ev'
+    ? `<div class="sc sc-ev"><span class="sc-t">${hm(x.a)}–${hm(x.z)}</span><span class="sc-n">${esc(x.title)}</span><span class="sc-tag">予定</span></div>`
+    : `<button class="sc sc-task tap ${x.over ? 'over' : ''}" data-act="view" data-id="${esc(x.t.ID)}" style="--c:var(${bizVar(x.t['事業'])})"><span class="sc-t">${hm(x.a)}–${hm(x.z)}</span><span class="sc-n">${esc(x.title)}</span><span class="sc-tag">仮${x.est ? '・時間未設定' : ''}${x.over ? '・時間外' : ''}</span></button>`).join('');
+  const note = S.over ? `<div class="sc-warn">${hm(WORK_END)}までに入りきらない分が${S.over}件あります（約${Math.ceil((S.lastEnd - WORK_END) / 15) * 15}分オーバー）</div>` : '';
+  return `<div class="tl"><div class="tl-bar">${ticks}${bar}</div><div class="tl-ax">${labels}</div>
+    <details class="sched" open><summary>今日の仮の時間割 <span class="n">カレンダーの予定は固定／タスクは仮置き（カレンダーには書きません）</span></summary>
+      ${S.allday.length ? `<div class="sc-all">終日：${S.allday.map(esc).join('　')}</div>` : ''}
+      <div class="sc-list">${rows || '<p class="empty-note">今日の予定・タスクはありません。</p>'}</div>${note}
+    </details></div>`;
 }
 
 function errBox(e){
