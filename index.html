@@ -50,7 +50,7 @@ button{cursor:pointer}
 .date small{font-size:20px;font-weight:700;margin-left:6px;letter-spacing:0;color:var(--sub)}
 .count{font-size:14px;color:var(--sub);text-align:right;line-height:1.3}
 .count b{display:block;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
-.strip{display:flex;gap:3px;margin-top:14px;height:10px}
+.strip{display:none}
 .strip span{flex:1;border-radius:2px;background:var(--c);opacity:.22}
 .strip span.done{opacity:1}
 .strip.empty span{background:var(--line);opacity:1}
@@ -238,16 +238,27 @@ button.m-t{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
 
 /* ---- 画面全体の並べ方：狭いと1列、広いと2〜3列 ---- */
 #app{display:block}
-.a-works{grid-area:works}.a-head{grid-area:head}.a-left{grid-area:left}.a-cal{grid-area:cal}
-.a-mid{grid-area:mid}.a-right{grid-area:right}.a-foot{grid-area:foot}
+.a-works{grid-area:works}.a-head{grid-area:head}.a-carry{grid-area:carry}.a-cal{grid-area:cal}
+.a-r2{grid-area:r2}.a-r3{grid-area:r3}.a-foot{grid-area:foot}
+.a-cal{width:100%;max-width:980px;margin-left:auto;margin-right:auto}
+.a-r2,.a-r3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px;align-items:start}
+.a-r2>section,.a-r3>section{min-width:0}
+/* ---- 今日のざっくり時間割 ---- */
+.tl{margin-top:14px}
+.tl-bar{position:relative;height:22px;border-radius:6px;background:var(--surface)}
+.tl-bar i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--accent);opacity:.85}
+.tl-bar b{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.tl-now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--danger);z-index:1}
+.tl-ax{position:relative;height:14px;font-size:10.5px;color:var(--sub)}
+.tl-ax span{position:absolute;transform:translateX(-50%)}
+.tl-info{font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.5}
 @media (min-width:700px){
-  #app{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;align-items:start;
-    grid-template-areas:"works works" "head head" "left left" "cal cal" "mid right" "foot foot"}
+  #app{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;
+    grid-template-areas:"works" "head" "cal" "carry" "r2" "r3" "foot"}
   dialog{margin:auto;border-radius:18px}
 }
 @media (min-width:1100px){
-  #app{grid-template-columns:repeat(3,minmax(0,1fr));
-    grid-template-areas:"works works works" "head head head" "left cal cal" "left mid right" "foot foot foot"}
+  #app{max-width:1500px}
 }
 
 /* ---- カレンダー（7日間を横に並べる） ---- */
@@ -588,16 +599,16 @@ function renderMain(err){
           <div class="date">${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small></div>
           <div class="count"><b>${done}/${tasks.length}</b>今日の完了</div>
         </div>
-        <div class="strip ${tasks.length?'':'empty'}" aria-hidden="true">${strip}</div>
+        ${timelineHtml(openT)}
       </header>
       ${err ? errBox(err) : ''}
     </div>
-    <div class="a-left">
-      ${state.carry.length ? `
-      <section class="carry">
+    ${state.carry.length ? `<div class="a-carry"><section class="carry">
         <h2>前日までの残り <span class="n">${state.carry.length}件 ・ 今日やるか、やめるか</span></h2>
         <div class="list">${state.carry.map(carryItem).join('')}</div>
-      </section>` : ''}
+      </section></div>` : ''}
+    <div class="a-cal">${upcomingHtml()}</div>
+    <div class="a-r2">
       <section>
         <h2>今日やること <span class="n">${openT.length}件</span></h2>
         ${eventsHtml(state.today)}
@@ -605,34 +616,50 @@ function renderMain(err){
           : `<p class="empty-note">${tasks.length ? '今日のタスクは全部終わりました。' : '今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。'}</p>`}
         ${doneBox('today')}
       </section>
-      ${waiting.length ? `
       <section>
         <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
-        <div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>
-      </section>` : ''}
-    </div>
-    <div class="a-cal">${upcomingHtml()}</div>
-    <div class="a-mid">${goalsHtml()}</div>
-    <div class="a-right">
-      ${decisionsHtml()}
-      ${somedayOpen.length || somedayDone ? `
+        ${waiting.length ? `<div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>` : '<p class="empty-note">なし</p>'}
+      </section>
       <section>
         <h2>日付なし <span class="n">${somedayOpen.length}件</span></h2>
-        ${somedayOpen.length ? `<div class="list">${somedayOpen.map(t => taskItem(t)).join('')}</div>` : ''}
+        ${somedayOpen.length ? `<div class="list">${somedayOpen.map(t => taskItem(t)).join('')}</div>` : '<p class="empty-note">なし</p>'}
         ${somedayDone}
-      </section>` : ''}
-      ${cands.length ? `
+      </section>
+    </div>
+    <div class="a-r3">
+      ${goalsHtml()}
+      ${decisionsHtml()}
       <section>
-        <details class="more cands">
-          <summary>候補 ${cands.length}件 <span class="n">Claudeが拾った未確認のもの</span></summary>
-          <div class="list">${cands.map(candItem).join('')}</div>
-        </details>
-      </section>` : ''}
+        <h2>候補 <span class="n">${cands.length}件・Claudeが拾った未確認のもの</span></h2>
+        ${cands.length ? `<div class="list">${cands.map(candItem).join('')}</div>` : '<p class="empty-note">なし</p>'}
+      </section>
     </div>
     <div class="foot a-foot">
       <span>${esc(state.fetchedAt)} 時点</span>
       <span></span>
     </div>`;
+}
+
+// 今日のざっくり時間割：6時〜22時の帯に、カレンダーの予定を置く
+function timelineHtml(openT){
+  const H0 = 6, H1 = 22, toH = hm => { const m = /^(\d+):(\d+)/.exec(hm || ''); return m ? +m[1] + +m[2] / 60 : null; };
+  const evs = eventsOn(state.today), timed = evs.filter(e => e.start), allday = evs.filter(e => !e.start);
+  const pos = h => Math.max(0, Math.min(100, (h - H0) / (H1 - H0) * 100));
+  const blocks = timed.map(e => {
+    const a = toH(e.start), z = e.end ? toH(e.end) : a + 1;
+    return `<i style="left:${pos(a)}%;width:${Math.max(pos(z) - pos(a), 1.2)}%" title="${esc(e.start)} ${esc(e.title)}"></i>`;
+  }).join('');
+  const ticks = [6, 9, 12, 15, 18, 21].map(h => `<b style="left:${pos(h)}%"></b>`).join('');
+  const labels = [6, 9, 12, 15, 18, 21].map(h => `<span style="left:${pos(h)}%">${h}</span>`).join('');
+  const nowH = new Date(Date.now() + 9 * 3600e3).getUTCHours() + new Date().getMinutes() / 60;
+  const now = nowH >= H0 && nowH <= H1 ? `<div class="tl-now" style="left:${pos(nowH)}%"></div>` : '';
+  const mins = openT.reduce((n, t) => n + (+t['見込み分'] || 0), 0);
+  const info = [
+    ...allday.map(e => '終日 ' + esc(e.title)),
+    ...timed.map(e => esc(e.start) + ' ' + esc(e.title)),
+    `未完了タスク ${openT.length}件` + (mins ? `（見込み約${mins >= 60 ? Math.round(mins / 6) / 10 + '時間' : mins + '分'}）` : ''),
+  ].join('　／　');
+  return `<div class="tl"><div class="tl-bar">${ticks}${blocks}${now}</div><div class="tl-ax">${labels}</div><div class="tl-info">${info}</div></div>`;
 }
 
 function errBox(e){
@@ -660,7 +687,7 @@ function taskItem(t, opt = {}){
     <button class="check" data-act="toggle" data-id="${esc(t.ID)}" aria-label="${isDone?'未完了に戻す':'完了にする'}：${esc(t['内容'])}">
       <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
     </button>
-    <button class="body tap" data-act="${opt.view || subs.length ? 'view' : 'edit'}" data-id="${esc(t.ID)}">
+    <button class="body tap" data-act="view" data-id="${esc(t.ID)}">
       <div class="title">${esc(opt.brief ? sum(t) : t['内容'])}${st}</div>
       <div class="meta">${meta}</div>
     </button>
@@ -669,7 +696,7 @@ function taskItem(t, opt = {}){
 
 function carryItem(t){
   return `<div class="item" style="--c:var(${bizVar(t['事業'])})">
-    <button class="body tap" data-act="edit" data-id="${esc(t.ID)}">
+    <button class="body tap" data-act="view" data-id="${esc(t.ID)}">
       <div class="title">${esc(t['内容'])}</div>
       <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${esc(mdShort(t['日付']))}の分</div>
     </button>
