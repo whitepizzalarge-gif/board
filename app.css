@@ -344,3 +344,16 @@ dialog{max-height:92vh;overflow:auto}
 #pvBody .list{margin-bottom:12px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- 確認リスト（AIが拾った項目）：種類のタグと、済／あとで／不要のボタン ---- */
+.kind{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;border:1px solid var(--line);color:var(--sub);margin-right:7px;vertical-align:1px}
+.kind.hot{border-color:var(--danger);color:var(--danger)}
+.item.chk,.item.cand{flex-wrap:wrap}
+.item.chk .body,.item.cand .body{flex:1 1 100%;min-width:0}
+.item.chk{padding-left:16px}
+.item.chk::before{position:absolute;left:0;top:0;bottom:0;align-self:auto}
+.item.chk .acts{display:flex;gap:8px;width:100%;padding:2px 0 6px}
+.item.chk .acts .btn-s{min-height:40px;min-width:64px;font-size:14px}
+.item.chk.later{opacity:.7}
+.item.chk,.item.cand{white-space:normal}
+.item.chk .acts{padding:2px 0 0}

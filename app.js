@@ -114,6 +114,10 @@ function renderMain(err){
   const somedayOpen = (state.someday || []).filter(t => t['状態'] !== '済');
   const somedayDone = doneBox('someday');
   const cands = state.candidates || [];
+  const checks = state.checks || [];
+  const chkNow = checks.filter(c => c['状態'] !== 'あとで')
+    .sort((a, b) => (a['期限'] || '9999') < (b['期限'] || '9999') ? -1 : (a['期限'] || '9999') > (b['期限'] || '9999') ? 1 : String(a['作成日時']) < String(b['作成日時']) ? -1 : 1);
+  const chkLater = checks.filter(c => c['状態'] === 'あとで');
 
   app.innerHTML = `
     <div class="a-works">${worksHtml()}</div>
@@ -154,8 +158,9 @@ function renderMain(err){
       ${goalsHtml()}
       ${decisionsHtml()}
       <section>
-        <h2>候補 <span class="n">${cands.length}件・Claudeが拾った未確認のもの</span></h2>
-        ${cands.length ? `<div class="list">${cands.map(candItem).join('')}</div>` : '<p class="empty-note">なし</p>'}
+        <h2>確認リスト <span class="n">${chkNow.length + cands.length}件・AIが拾った「これ大丈夫？」</span></h2>
+        ${chkNow.length + cands.length ? `<div class="list">${chkNow.map(checkItem).join('')}${cands.map(candItem).join('')}</div>` : '<p class="empty-note">なし</p>'}
+        ${chkLater.length ? `<details class="more"><summary>あとで ${chkLater.length}件</summary><div class="list">${chkLater.map(checkItem).join('')}</div></details>` : ''}
       </section>
     </div>
     <div class="foot a-foot">
@@ -260,10 +265,28 @@ function carryItem(t){
   </div>`;
 }
 
+// 確認リスト：AIが拾った項目（スプシ「確認」タブ）。種類のタグ付き。済／あとで／不要で片づける
+const CHECK_HOT = ['返信漏れ', '期限'];
+function checkItem(c){
+  const later = c['状態'] === 'あとで';
+  const meta = [c['出所'] ? esc(c['出所']) : '', c['期限'] ? `期限 ${esc(mdShort(c['期限']))}` : '', c['メモ'] ? esc(c['メモ']) : ''].filter(Boolean).join('　');
+  return `<div class="item chk ${later ? 'later' : ''}">
+    <div class="body">
+      <div class="title"><span class="kind ${CHECK_HOT.includes(c['種類']) ? 'hot' : ''}">${esc(c['種類'] || '確認')}</span>${esc(c['内容'])}</div>
+      ${meta ? `<div class="meta">${meta}</div>` : ''}
+    </div>
+    <div class="acts">
+      <button class="btn-s keep" data-act="check-done" data-id="${esc(c['ID'])}">済</button>
+      ${later ? '' : `<button class="btn-s" data-act="check-later" data-id="${esc(c['ID'])}">あとで</button>`}
+      <button class="btn-s drop" data-act="check-drop" data-id="${esc(c['ID'])}">不要</button>
+    </div>
+  </div>`;
+}
+
 function candItem(c){
   return `<div class="item cand">
     <div class="body">
-      <div class="title">${esc(c['原文'])}</div>
+      <div class="title"><span class="kind">候補</span>${esc(c['原文'])}</div>
       <div class="meta">${esc(String(c['日時']).slice(5, 10).replace('-','/'))}</div>
     </div>
     <div class="acts">
@@ -483,6 +506,15 @@ document.addEventListener('click', e => {
     case 'cand-drop': {
       act(() => { state.candidates = state.candidates.filter(x => x['行ID'] !== id); },
         () => api('cand', {rowId:id}), '不要にしました');
+      break;
+    }
+    case 'check-done': case 'check-later': case 'check-drop': {
+      const st = {'check-done':'済', 'check-later':'あとで', 'check-drop':'不要'}[b.dataset.act];
+      const label = {'済':'済にしました', 'あとで':'あとでに移しました', '不要':'不要にしました'}[st];
+      act(() => {
+        if (st === 'あとで') (state.checks || []).forEach(x => { if (x.ID === id) x['状態'] = 'あとで'; });
+        else state.checks = (state.checks || []).filter(x => x.ID !== id);
+      }, () => api('check', {id, status: st}), label);
       break;
     }
     case 'reload': refreshSite(); break;
@@ -854,6 +886,12 @@ function demoApi(action, p){
       {ID:'R2','名前':'直売前の印刷業務','事業':'円山製麺','周期':'直売日前日','開始日':'','期限日':'','見込み分':'','手順':'賞味期限ラベル確認・印刷\nちらし印刷','有効':'TRUE','メモ':''},
     ],
     inbox:[{'行ID':'L1','日時':today+' 09:00','原文':'[Todoist] チラシを作るか検討','仕分け先':'候補（未確認）'}],
+    checks:[
+      {ID:'K1','種類':'返信漏れ','内容':'ご担当者さまからの見積もり依頼に返信していない','出所':'Gmail　山田商店 山田様　10/16','関連ID':'','状態':'未','期限':'','作成日時':today+' 08:00','メモ':''},
+      {ID:'K2','種類':'待ち放置','内容':'契約書の返送：待ちのまま3日たっています','出所':'ボード','関連ID':'T9','状態':'未','期限':day(4),'作成日時':today+' 08:00','メモ':''},
+      {ID:'K3','種類':'準備不足','内容':'明後日の直売事務所の前に、印刷物の準備タスクがありません','出所':'カレンダー','関連ID':'','状態':'未','期限':day(2),'作成日時':today+' 08:00','メモ':''},
+      {ID:'K4','種類':'確認','内容':'経費精算は月末にまとめる、でよいですか？','出所':'AIからの質問','関連ID':'T10','状態':'あとで','期限':'','作成日時':today+' 08:00','メモ':''},
+    ],
     projects:[
       {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':day(12)},
       {ID:'P3','名前':'新商品パッケージ','事業':'円山製麺','状態':'進行中','次の一手':'箱の入稿データ作成','期限':day(-1)},
@@ -883,6 +921,7 @@ function demoApi(action, p){
         projects: demo.projects.filter(x => x['状態'] !== '完了'),
         goals: demo.goals, decisions: demo.decisions,
         candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
+        checks: demo.checks.filter(x => x['状態'] === '未' || x['状態'] === 'あとで'),
         events: demo.events,
         works: demo.works,
         calTasks: T.filter(t => t['日付'] && t['状態'] !== '捨'),
@@ -904,6 +943,7 @@ function demoApi(action, p){
     if (action === 'recur') return JSON.parse(JSON.stringify(demo.recur));
     if (action === 'events') return JSON.parse(JSON.stringify(demo.events.filter(e => e.date >= p.from && e.date < p.to)));
     if (action === 'rupdate'){ Object.assign(demo.recur.find(x => x.ID === p.id), p.fields); return {}; }
+    if (action === 'check'){ const c = demo.checks.find(x => x.ID === p.id); if (c) c['状態'] = p.status; return {}; }
     if (action === 'cand'){ const c = demo.inbox.find(x => x['行ID'] === p.rowId); if (c) c['仕分け先'] = '候補（不要）'; return {}; }
   });
 }
