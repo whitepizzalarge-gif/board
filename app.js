@@ -127,6 +127,7 @@ function renderMain(err){
           <div class="date">${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small></div>
           <div class="count"><b>${done}/${tasks.length}</b>今日の完了</div>
         </div>
+        ${todayTimeHtml()}
         ${timelineHtml(openT)}
       </header>
       ${err ? errBox(err) : ''}
@@ -167,6 +168,15 @@ function renderMain(err){
       <span>${esc(state.fetchedAt)} 時点</span>
       <span></span>
     </div>`;
+}
+
+// 今日の作業時間（事業別）。夜の洗い出しでタスクに開始・終了が入ると出る（GASの todayTime）
+const fmtMin = m => m >= 60 ? Math.floor(m / 60) + '時間' + (m % 60 ? m % 60 + '分' : '') : m + '分';
+function todayTimeHtml(){
+  const tt = state.todayTime;
+  if (!tt || !tt.total) return '<div class="tt"><span class="tt-none">今日の作業時間：まだ記録なし（夜の洗い出しで入ります）</span></div>';
+  return `<div class="tt"><span class="tt-h">今日の作業時間 ${fmtMin(tt.total)}</span>${(tt.byBiz || []).map(b =>
+    `<span class="tt-b" style="--c:var(${bizVar(b['事業'])})">${esc(b['事業'])} ${fmtMin(b['分'])}</span>`).join('')}</div>`;
 }
 
 // 今日の仮の時間割：カレンダーの予定は固定、今日やることを空き時間に順に詰める（画面の中だけ。カレンダーには書かない）
@@ -922,6 +932,7 @@ function demoApi(action, p){
         goals: demo.goals, decisions: demo.decisions,
         candidates: demo.inbox.filter(x => x['仕分け先'] === '候補（未確認）'),
         checks: demo.checks.filter(x => x['状態'] === '未' || x['状態'] === 'あとで'),
+        todayTime: {from: today, to: today, total: 210, count: 4, byBiz: [{'事業':'円山製麺','分':120,'割合':57.1}, {'事業':'ギガネット（通信）','分':60,'割合':28.6}, {'事業':'個人','分':30,'割合':14.3}]},
         events: demo.events,
         works: demo.works,
         calTasks: T.filter(t => t['日付'] && t['状態'] !== '捨'),

@@ -9,7 +9,7 @@
 
 ## 守ること
 - **このリポジトリはPublic。GASのURL・合言葉・個人情報・売上の実数を、コード・コメント・コミットメッセージに書かない。**
-- GASのアクション名（data／status／keep／add／update／padd／pupdate／cand／recur／rupdate／events／sub）と、スプシの見出し・タブ名は変えない。画面だけを直す場合は、これらに触れない
+- GASのアクション名（data／status／keep／add／update／padd／pupdate／cand／recur／rupdate／events／sub／checks／check／time）と、スプシの見出し・タブ名は変えない。画面だけを直す場合は、これらに触れない
 - 外部ライブラリは入れない（フォントのGoogle Fontsだけ）。ビルド工程は作らない
 - 日本語UI。タップ領域は40px以上。ダークモード対応を崩さない
 

@@ -357,3 +357,9 @@ dialog{max-height:92vh;overflow:auto}
 .item.chk.later{opacity:.7}
 .item.chk,.item.cand{white-space:normal}
 .item.chk .acts{padding:2px 0 0}
+
+/* ---- 今日の作業時間（事業別・小さく1行） ---- */
+.tt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:8px;font-size:12.5px;color:var(--sub);line-height:1.5}
+.tt-h{color:var(--ink);font-weight:600}
+.tt-b{white-space:nowrap}
+.tt-b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:4px}
