@@ -363,3 +363,8 @@ dialog{max-height:92vh;overflow:auto}
 .tt-h{color:var(--ink);font-weight:600}
 .tt-b{white-space:nowrap}
 .tt-b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:4px}
+
+/* ---- 業務のない事業カード（個人など）：プロジェクト名と中身の要約を外から見せる ---- */
+.wcard .wproj li{font-size:13.5px}
+.wcard .wproj b{display:block;font-weight:700}
+.wcard .wproj span{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;color:var(--sub);line-height:1.45;margin-top:2px}

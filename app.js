@@ -398,6 +398,7 @@ function worksHtml(){
       return `<button class="wcard" data-act="bizview" data-biz="${esc(b.name)}" style="--c:var(${b.v})">
         <h3>${esc(b.name)}</h3>
         <ul>${items.map(w => `<li>${esc(w['業務'])}</li>`).join('')}</ul>
+        ${items.length ? '' : `<ul class="wproj">${pj.map(p => `<li><b>${esc(p['名前'])}</b>${p['次の一手'] ? `<span>${esc(p['次の一手'])}</span>` : ''}</li>`).join('')}</ul>`}
         <div class="wfoot ${over?'due-over':''}">プロジェクト ${pj.length}件${over?'・期限切れあり':''}</div>
       </button>`;
     }).join('')}</div>
@@ -905,6 +906,7 @@ function demoApi(action, p){
     projects:[
       {ID:'P1','名前':'ショッピングモール催事','事業':'ギガネット（通信）','状態':'進行中','次の一手':'駐車場の台数を確定','期限':day(12)},
       {ID:'P3','名前':'新商品パッケージ','事業':'円山製麺','状態':'進行中','次の一手':'箱の入稿データ作成','期限':day(-1)},
+      {ID:'P6','名前':'毎日メモ','事業':'個人','状態':'進行中','次の一手':'毎日やること：通話録音／ハーモス日次勤怠／空気清浄機／事務所冷蔵庫（中の個数と在庫）','期限':''},
       {ID:'P5','名前':'社内ToDoアプリ','事業':'エルダイブ','状態':'待ち','次の一手':'3人で公開範囲を決める','期限':''},
     ],
     goals:[

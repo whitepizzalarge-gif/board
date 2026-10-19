@@ -1,6 +1,6 @@
 // 画面ファイルだけをキャッシュ（データは毎回取りに行き、失敗時は端末に残した前回分を表示）
-const CACHE = 'board-v17';
-const FILES = ['./', './index.html', './app.css?v=17', './app.js?v=17', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
+const CACHE = 'board-v18';
+const FILES = ['./', './index.html', './app.css?v=18', './app.js?v=18', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))));
