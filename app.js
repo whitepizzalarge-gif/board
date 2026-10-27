@@ -120,6 +120,15 @@ function renderMain(err){
   const chkLater = checks.filter(c => c['状態'] === 'あとで');
 
   app.innerHTML = `
+    <div class="a-today">
+      <section class="today-first">
+        <h2>今日やること <span class="n">${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）・${openT.length}件</span></h2>
+        ${eventsHtml(state.today)}
+        ${openT.length ? `<div class="list">${openT.map(t => taskItem(t)).join('')}</div>`
+          : `<p class="empty-note">${tasks.length ? '今日のタスクは全部終わりました。' : '今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。'}</p>`}
+        ${doneBox('today')}
+      </section>
+    </div>
     <div class="a-works">${worksHtml()}</div>
     <div class="a-head">
       <header class="today">
@@ -138,13 +147,6 @@ function renderMain(err){
       </section></div>` : ''}
     <div class="a-cal">${upcomingHtml()}</div>
     <div class="a-r2">
-      <section>
-        <h2>今日やること <span class="n">${openT.length}件</span></h2>
-        ${eventsHtml(state.today)}
-        ${openT.length ? `<div class="list">${openT.map(t => taskItem(t)).join('')}</div>`
-          : `<p class="empty-note">${tasks.length ? '今日のタスクは全部終わりました。' : '今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。'}</p>`}
-        ${doneBox('today')}
-      </section>
       <section>
         <h2>待ち・保留 <span class="n">${waiting.length}件</span></h2>
         ${waiting.length ? `<div class="list">${waiting.map(t => taskItem(t, {showDate:true})).join('')}</div>` : '<p class="empty-note">なし</p>'}
