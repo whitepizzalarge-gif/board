@@ -114,6 +114,9 @@ function renderMain(err){
   const somedayOpen = (state.someday || []).filter(t => t['状態'] !== '済');
   const somedayDone = doneBox('someday');
   const cands = state.candidates || [];
+  // 前日までの残りのうち、期限がまだ先のもの（期限まで進めている途中）は別に出す
+  const carryOngoing = state.carry.filter(t => t['期限'] && t['期限'] > state.today);
+  const carryStale = state.carry.filter(t => !carryOngoing.includes(t));
   const checks = state.checks || [];
   const chkNow = checks.filter(c => c['状態'] !== 'あとで')
     .sort((a, b) => (a['期限'] || '9999') < (b['期限'] || '9999') ? -1 : (a['期限'] || '9999') > (b['期限'] || '9999') ? 1 : String(a['作成日時']) < String(b['作成日時']) ? -1 : 1);
@@ -127,6 +130,7 @@ function renderMain(err){
         ${openT.length ? `<div class="list">${openT.map(t => taskItem(t)).join('')}</div>`
           : `<p class="empty-note">${tasks.length ? '今日のタスクは全部終わりました。' : '今日のタスクはまだありません。右下の＋か、Claudeに送って追加します。'}</p>`}
         ${doneBox('today')}
+        ${chkNow.length ? `<button class="chk-jump" data-act="jump-check">これ大丈夫？が${chkNow.length}件あります（確認リストへ）</button>` : ''}
       </section>
     </div>
     <div class="a-works">${worksHtml()}</div>
@@ -142,8 +146,10 @@ function renderMain(err){
       ${err ? errBox(err) : ''}
     </div>
     ${state.carry.length ? `<div class="a-carry"><section class="carry">
-        <h2>前日までの残り <span class="n">${state.carry.length}件 ・ 今日やるか、やめるか</span></h2>
-        <div class="list">${state.carry.map(carryItem).join('')}</div>
+        ${carryStale.length ? `<h2>前日までの残り <span class="n">${carryStale.length}件・済／今日やる／やめるで片づける</span></h2>
+        <div class="list">${carryStale.map(t => carryItem(t)).join('')}</div>` : ''}
+        ${carryOngoing.length ? `<h2 class="sub-h">期限まで進めているもの <span class="n">${carryOngoing.length}件</span></h2>
+        <div class="list">${carryOngoing.map(t => carryItem(t, true)).join('')}</div>` : ''}
       </section></div>` : ''}
     <div class="a-cal">${upcomingHtml()}</div>
     <div class="a-r2">
@@ -160,7 +166,7 @@ function renderMain(err){
     <div class="a-r3">
       ${goalsHtml()}
       ${decisionsHtml()}
-      <section>
+      <section id="checks">
         <h2>確認リスト <span class="n">${chkNow.length + cands.length}件・AIが拾った「これ大丈夫？」</span></h2>
         ${chkNow.length + cands.length ? `<div class="list">${chkNow.map(checkItem).join('')}${cands.map(candItem).join('')}</div>` : '<p class="empty-note">なし</p>'}
         ${chkLater.length ? `<details class="more"><summary>あとで ${chkLater.length}件</summary><div class="list">${chkLater.map(checkItem).join('')}</div></details>` : ''}
@@ -264,14 +270,15 @@ function taskItem(t, opt = {}){
   </div>`;
 }
 
-function carryItem(t){
-  return `<div class="item" style="--c:var(${bizVar(t['事業'])})">
+function carryItem(t, ongoing){
+  return `<div class="item carry-item" style="--c:var(${bizVar(t['事業'])})">
     <button class="body tap" data-act="view" data-id="${esc(t.ID)}">
-      <div class="title">${esc(t['内容'])}</div>
-      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${esc(mdShort(t['日付']))}の分</div>
+      <div class="title">${esc(sum(t))}</div>
+      <div class="meta"><span class="biz">${esc(t['事業'] || '事業未設定')}</span>　${ongoing ? `期限 ${esc(mdShort(t['期限']))}` : esc(mdShort(t['日付'])) + 'の分'}</div>
     </button>
     <div class="acts">
-      <button class="btn-s keep" data-act="keep" data-id="${esc(t.ID)}">今日やる</button>
+      <button class="btn-s keep" data-act="carry-done" data-id="${esc(t.ID)}">済</button>
+      <button class="btn-s" data-act="keep" data-id="${esc(t.ID)}">今日やる</button>
       <button class="btn-s drop" data-act="drop" data-id="${esc(t.ID)}">やめる</button>
     </div>
   </div>`;
@@ -281,15 +288,19 @@ function carryItem(t){
 const CHECK_HOT = ['返信漏れ', '期限'];
 function checkItem(c){
   const later = c['状態'] === 'あとで';
-  const meta = [c['出所'] ? esc(c['出所']) : '', c['期限'] ? `期限 ${esc(mdShort(c['期限']))}` : '', c['メモ'] ? esc(c['メモ']) : ''].filter(Boolean).join('　');
+  const memo = String(c['メモ'] || '').indexOf('auto:') === 0 ? '' : c['メモ'];
+  const meta = [c['出所'] ? esc(c['出所']) : '', c['期限'] ? `期限 ${esc(mdShort(c['期限']))}` : '', memo ? esc(memo) : ''].filter(Boolean).join('　');
+  const t = c['関連ID'] ? findTask(c['関連ID']) : null;
   return `<div class="item chk ${later ? 'later' : ''}">
     <div class="body">
       <div class="title"><span class="kind ${CHECK_HOT.includes(c['種類']) ? 'hot' : ''}">${esc(c['種類'] || '確認')}</span>${esc(c['内容'])}</div>
       ${meta ? `<div class="meta">${meta}</div>` : ''}
     </div>
-    <div class="acts">
+    <div class="acts">${t ? `
+      <button class="btn-s keep" data-act="check-taskdone" data-id="${esc(c['ID'])}" data-task="${esc(t.ID)}">完了にした</button>
+      <button class="btn-s" data-act="view" data-id="${esc(t.ID)}">開いて直す</button>` : `
       <button class="btn-s keep" data-act="check-done" data-id="${esc(c['ID'])}">済</button>
-      ${later ? '' : `<button class="btn-s" data-act="check-later" data-id="${esc(c['ID'])}">あとで</button>`}
+      ${later ? '' : `<button class="btn-s" data-act="check-later" data-id="${esc(c['ID'])}">あとで</button>`}`}
       <button class="btn-s drop" data-act="check-drop" data-id="${esc(c['ID'])}">不要</button>
     </div>
   </div>`;
@@ -530,6 +541,23 @@ document.addEventListener('click', e => {
       }, () => api('check', {id, status: st}), label);
       break;
     }
+    case 'carry-done': {
+      act(() => {
+        state.carry = state.carry.filter(x => x.ID !== id);
+        state.checks = (state.checks || []).filter(x => x['関連ID'] !== id);
+      }, () => api('status', {id, status: '済'}), '完了にしました');
+      break;
+    }
+    case 'check-taskdone': {
+      const tid = b.dataset.task;
+      act(() => {
+        allTasks().filter(x => x.ID === tid).forEach(x => { x['状態'] = '済'; x['完了日時'] = nowStr(); });
+        state.carry = state.carry.filter(x => x.ID !== tid);
+        state.checks = (state.checks || []).filter(x => x.ID !== id && x['関連ID'] !== tid);
+      }, () => api('status', {id: tid, status: '済'}).then(() => api('check', {id, status: '済'})), '完了にしました');
+      break;
+    }
+    case 'jump-check': { const s = document.getElementById('checks'); if (s) s.scrollIntoView({behavior: 'smooth', block: 'start'}); break; }
     case 'reload': refreshSite(); break;
     case 'month': openMonth(); break;
     case 'mday': mSel = b.dataset.day; fillMonth(); break;
@@ -874,6 +902,7 @@ function demoApi(action, p){
       {ID:'T3','日付':today,'内容':'新商品の箱 修正版を確認に出す','事業':'円山製麺','状態':'未','メモ':'','プロジェクトID':'P3'},
       {ID:'T5','日付':today,'内容':'メニューPOPの英語表記を確認','事業':'SHEEP GANG','状態':'未','メモ':''},
       {ID:'T0','日付':day(-1),'内容':'インスタ ストーリー投稿','事業':'円山製麺','状態':'未','メモ':''},
+      {ID:'T11','日付':day(-3),'内容':'放送大学の課題を提出','事業':'個人','状態':'未','メモ':'','期限':day(10)},
       {ID:'T7','日付':day(2),'内容':'売り場の全体デザイン提案','事業':'円山製麺','状態':'未','メモ':'','プロジェクトID':'P3','期限':day(2)},
       {ID:'T8','日付':day(5),'内容':'月初の交通費回収','事業':'エルダイブ','状態':'未','メモ':''},
       {ID:'T9','日付':day(1),'内容':'契約書の返送','事業':'ギガネット（通信）','状態':'待ち','メモ':'先方の確認待ち','期限':day(4)},

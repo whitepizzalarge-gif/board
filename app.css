@@ -371,3 +371,14 @@ dialog{max-height:92vh;overflow:auto}
 
 /* ---- 今日やること：画面のいちばん上 ---- */
 .a-today .today-first{margin-top:14px}
+
+/* ---- 前日までの残り：済／今日やる／やめるの3つ。期限まで進めているものは下に分ける ---- */
+.carry .sub-h{margin-top:18px;font-size:14px}
+.carry-item{flex-wrap:wrap}
+.carry-item .body{flex:1 1 220px;min-width:0}
+.carry-item .acts{display:flex;gap:6px;flex:none;margin-left:auto}
+.carry-item .acts .btn-s{min-height:40px}
+
+/* ---- 今日やることの下：確認リストへの案内 ---- */
+.chk-jump{display:block;width:100%;margin-top:10px;min-height:40px;border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
+#checks{scroll-margin-top:70px}
